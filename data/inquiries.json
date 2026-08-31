@@ -1,0 +1,36 @@
+[
+  {
+    "id": 1001,
+    "status": "contacted",
+    "source": "form",
+    "adminNotes": "",
+    "createdAt": "2026-08-19T06:41:54.063Z",
+    "updatedAt": "2026-08-19T06:42:31.567Z",
+    "name": "s",
+    "company": "e",
+    "email": "s@mail.xom",
+    "phone": "432",
+    "chemical": "44",
+    "quantity": "33",
+    "unit": "kg",
+    "industry": "Water Treatment",
+    "message": ""
+  },
+  {
+    "id": 1002,
+    "status": "new",
+    "source": "whatsapp",
+    "adminNotes": "",
+    "createdAt": "2026-08-19T06:44:18.415Z",
+    "updatedAt": "2026-08-19T06:44:18.415Z",
+    "name": "x",
+    "company": "s",
+    "email": "ssa@g.com",
+    "phone": "w",
+    "chemical": "a",
+    "quantity": "3",
+    "unit": "kg",
+    "industry": "Manufacturing",
+    "message": ""
+  }
+]
