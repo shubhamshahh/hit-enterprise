@@ -1,7 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 
-const DATA_DIR = path.join(__dirname, "..", "data");
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const DATA_DIR = isVercel ? path.join("/tmp", "hit_data") : path.join(__dirname, "..", "data");
 const INQUIRIES_FILE = path.join(DATA_DIR, "inquiries.json");
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 
@@ -24,9 +25,31 @@ const DEFAULT_PRODUCTS = [
 
 function ensureStore() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(INQUIRIES_FILE)) fs.writeFileSync(INQUIRIES_FILE, "[]", "utf-8");
+  
+  if (!fs.existsSync(INQUIRIES_FILE)) {
+    const seedInquiries = path.join(__dirname, "..", "data", "inquiries.json");
+    if (fs.existsSync(seedInquiries)) {
+      try {
+        fs.copyFileSync(seedInquiries, INQUIRIES_FILE);
+      } catch (e) {
+        fs.writeFileSync(INQUIRIES_FILE, "[]", "utf-8");
+      }
+    } else {
+      fs.writeFileSync(INQUIRIES_FILE, "[]", "utf-8");
+    }
+  }
+
   if (!fs.existsSync(PRODUCTS_FILE)) {
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(DEFAULT_PRODUCTS, null, 2), "utf-8");
+    const seedProducts = path.join(__dirname, "..", "data", "products.json");
+    if (fs.existsSync(seedProducts)) {
+      try {
+        fs.copyFileSync(seedProducts, PRODUCTS_FILE);
+      } catch (e) {
+        fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(DEFAULT_PRODUCTS, null, 2), "utf-8");
+      }
+    } else {
+      fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(DEFAULT_PRODUCTS, null, 2), "utf-8");
+    }
   }
 }
 

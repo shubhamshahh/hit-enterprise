@@ -247,7 +247,12 @@ app.post("/api/admin/test-notify", requireAdmin, async (req, res) => {
 });
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
+app.get("/api", (req, res) => res.json({ ok: true, name: "Hit Enterprise API" }));
 
-app.listen(PORT, () => {
-  console.log(`🚀 Hit Enterprise server running on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Hit Enterprise server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
