@@ -1619,6 +1619,14 @@ if (sideUpdateInventoryBtn) sideUpdateInventoryBtn.addEventListener("click", ope
 if (closeUpdateInventoryModal) closeUpdateInventoryModal.addEventListener("click", closeUpdateInventory);
 if (cancelUpdateInventoryModal) cancelUpdateInventoryModal.addEventListener("click", closeUpdateInventory);
 
+const invAddNewChemicalBtn = document.getElementById("invAddNewChemicalBtn");
+if (invAddNewChemicalBtn) {
+  invAddNewChemicalBtn.addEventListener("click", () => {
+    closeUpdateInventory();
+    openProductModal(null);
+  });
+}
+
 if (updateInventoryForm) {
   updateInventoryForm.addEventListener("submit", async (e) => {
     e.preventDefault();
