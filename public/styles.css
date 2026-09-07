@@ -162,10 +162,12 @@ p { color: var(--color-ink-soft); }
   background: rgba(7, 16, 25, 0.98);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
-.site-header .wrap { display: flex; align-items: center; justify-content: space-between; }
+.site-header .wrap { display: flex; align-items: center; justify-content: space-between; width: 100%; }
 
 .logo { display: flex; align-items: center; gap: 12px; font-family: var(--font-display); font-weight: 700; font-size: 19px; text-decoration: none; color: #FFFFFF !important; transition: color 0.4s var(--ease); }
 .site-header.is-scrolled .logo { color: #FFFFFF !important; }
+.logo-text { display: flex; flex-direction: column; }
+.logo-brand { font-weight: 700; letter-spacing: -0.01em; }
 .logo-mark {
   width: 38px; height: 38px;
   border-radius: 10px;
@@ -183,6 +185,12 @@ p { color: var(--color-ink-soft); }
 }
 .logo small { display: block; font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.16em; color: var(--color-accent-light) !important; font-weight: 500; }
 .site-header.is-scrolled .logo small { color: var(--color-accent-light) !important; }
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+}
 
 .nav { display: flex; align-items: center; gap: 36px; flex-wrap: nowrap; }
 .nav a {
@@ -203,10 +211,8 @@ p { color: var(--color-ink-soft); }
 
 .header-cta { display: flex; align-items: center; gap: 16px; }
 .header-phone {
-  font-family: var(--font-mono); font-size: 13px; text-decoration: none;
-  color: #FFFFFF !important; font-weight: 600; display: none; transition: color 0.3s var(--ease);
+  display: none !important;
 }
-.site-header.is-scrolled .header-phone { color: #FFFFFF !important; }
 .nav-toggle {
   display: none;
   background: rgba(255, 255, 255, 0.12);
@@ -252,7 +258,7 @@ p { color: var(--color-ink-soft); }
   .mobile-menu-cta { display: inline-flex !important; margin-top: 12px; font-size: 16px !important; }
 }
 
-@media (min-width: 720px) { .header-phone { display: inline-block; } }
+.header-phone { display: none !important; }
 
 /* RESPONSIVE MOBILE HEADER - 100% VISIBILITY & ZERO CUT-OFF */
 @media (max-width: 1080px) {
@@ -261,6 +267,11 @@ p { color: var(--color-ink-soft); }
   }
   .site-header .wrap {
     padding: 0 16px;
+    gap: 10px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
     gap: 10px;
   }
   .header-cta {
