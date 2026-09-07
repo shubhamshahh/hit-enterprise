@@ -1301,6 +1301,64 @@ function triggerQuickImageUpload(productId) {
   }
 }
 
+function openImageViewerModal(id, name, imgSrc) {
+  const modal = document.getElementById("imageViewerModal");
+  const title = document.getElementById("imageViewerTitle");
+  const img = document.getElementById("imageViewerImg");
+  const prodIdInput = document.getElementById("imageViewerProdId");
+  if (!modal || !img) return;
+
+  if (title) title.textContent = `${name || "Chemical"} - Photo Preview`;
+  img.src = imgSrc || "";
+  if (prodIdInput) prodIdInput.value = id || "";
+  modal.style.display = "flex";
+}
+
+async function deleteProductPhoto(id, name) {
+  if (!id) return;
+  if (confirm(`Remove photo for "${name || "this chemical"}"?`)) {
+    try {
+      showAdminToast("Removing photo...");
+      await fetchAdmin(`/api/admin/products/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ image: "" }),
+      });
+      const viewerModal = document.getElementById("imageViewerModal");
+      if (viewerModal) viewerModal.style.display = "none";
+      loadProducts();
+      showAdminToast("Photo removed successfully!");
+    } catch (err) {
+      alert("Failed to remove photo: " + err.message);
+    }
+  }
+}
+
+// Image Viewer Modal Listeners
+const imageViewerModal = document.getElementById("imageViewerModal");
+const closeImageViewerModal = document.getElementById("closeImageViewerModal");
+const imageViewerCloseBtn = document.getElementById("imageViewerCloseBtn");
+const imageViewerChangeBtn = document.getElementById("imageViewerChangeBtn");
+const imageViewerDeleteBtn = document.getElementById("imageViewerDeleteBtn");
+
+if (closeImageViewerModal) closeImageViewerModal.addEventListener("click", () => (imageViewerModal.style.display = "none"));
+if (imageViewerCloseBtn) imageViewerCloseBtn.addEventListener("click", () => (imageViewerModal.style.display = "none"));
+
+if (imageViewerChangeBtn) {
+  imageViewerChangeBtn.addEventListener("click", () => {
+    const id = document.getElementById("imageViewerProdId").value;
+    if (imageViewerModal) imageViewerModal.style.display = "none";
+    if (id) triggerQuickImageUpload(id);
+  });
+}
+
+if (imageViewerDeleteBtn) {
+  imageViewerDeleteBtn.addEventListener("click", () => {
+    const id = document.getElementById("imageViewerProdId").value;
+    const prod = productsData.find((p) => String(p.id) === String(id));
+    deleteProductPhoto(id, prod ? prod.name : "");
+  });
+}
+
 function renderProductsTable(products) {
   const wrap = document.getElementById("productsTableWrap");
   if (!wrap) return;
@@ -1321,7 +1379,7 @@ function renderProductsTable(products) {
             <th>Chemical Name</th>
             <th>Category</th>
             <th>Inventory Stock</th>
-            <th>Photo Action</th>
+            <th>Photo Actions</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -1331,7 +1389,7 @@ function renderProductsTable(products) {
             return `
             <tr>
               <td>
-                <div class="prod-thumb-click" data-id="${p.id}" title="Click to upload/change photo" style="width: 44px; height: 44px; border-radius: 8px; overflow: hidden; background: var(--adm-input-bg); border: 1px solid var(--adm-card-border); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
+                <div class="${hasImg ? 'prod-thumb-view' : 'prod-thumb-upload'}" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-img="${escapeHtml(p.image || '')}" title="${hasImg ? 'Click to view full photo' : 'Click to upload photo'}" style="width: 44px; height: 44px; border-radius: 8px; overflow: hidden; background: var(--adm-input-bg); border: 1px solid var(--adm-card-border); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
                   ${
                     hasImg
                       ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
@@ -1344,10 +1402,30 @@ function renderProductsTable(products) {
               <td><span class="category-pill">${escapeHtml(p.category)}</span></td>
               <td>${formatProductStock(p)}</td>
               <td>
-                <button type="button" class="btn btn-secondary btn-quick-upload-img" data-id="${p.id}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; border-color: rgba(200,155,60,0.35); color: var(--adm-text-main); white-space: nowrap;">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                  ${hasImg ? 'Change Photo' : '+ Upload Photo'}
-                </button>
+                <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                  ${
+                    hasImg
+                      ? `
+                        <button type="button" class="btn btn-secondary btn-view-photo" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-img="${escapeHtml(p.image)}" style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; font-size: 11.5px; font-weight: 600;">
+                          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                          View
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-quick-upload-img" data-id="${p.id}" style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; font-size: 11.5px; font-weight: 600; border-color: rgba(200,155,60,0.35);">
+                          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                          Change
+                        </button>
+                        <button type="button" class="btn btn-action-delete btn-delete-photo" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-tooltip="Remove / Delete Photo">
+                          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                      `
+                      : `
+                        <button type="button" class="btn btn-secondary btn-quick-upload-img" data-id="${p.id}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; border-color: rgba(200,155,60,0.35); color: var(--adm-text-main); white-space: nowrap;">
+                          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                          + Upload Photo
+                        </button>
+                      `
+                  }
+                </div>
               </td>
               <td>
                 <div style="display: flex; gap: 6px;">
@@ -1381,7 +1459,7 @@ function renderProductsTable(products) {
         return `
           <div class="mobile-data-card">
             <div class="mobile-card-header" style="display: flex; align-items: center; gap: 12px;">
-              <div class="prod-thumb-click" data-id="${p.id}" title="Click to upload/change photo" style="width: 42px; height: 42px; border-radius: 8px; overflow: hidden; background: var(--adm-input-bg); border: 1px solid var(--adm-card-border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
+              <div class="${hasImg ? 'prod-thumb-view' : 'prod-thumb-upload'}" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-img="${escapeHtml(p.image || '')}" title="${hasImg ? 'Click to view full photo' : 'Click to upload photo'}" style="width: 44px; height: 44px; border-radius: 8px; overflow: hidden; background: var(--adm-input-bg); border: 1px solid var(--adm-card-border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
                 ${
                   hasImg
                     ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" style="width: 100%; height: 100%; object-fit: cover;">`
@@ -1402,11 +1480,31 @@ function renderProductsTable(products) {
                 </span>
               </div>
             </div>
-            <div class="mobile-card-footer" style="display: flex; gap: 8px; align-items: center; justify-content: space-between; width: 100%; margin-top: 10px;">
-              <button type="button" class="btn btn-secondary btn-quick-upload-img" data-id="${p.id}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; border-color: rgba(200,155,60,0.35); color: var(--adm-text-main);">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                ${hasImg ? 'Change Photo' : '+ Upload Photo'}
-              </button>
+            <div class="mobile-card-footer" style="display: flex; gap: 8px; align-items: center; justify-content: space-between; width: 100%; margin-top: 10px; flex-wrap: wrap;">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                ${
+                  hasImg
+                    ? `
+                      <button type="button" class="btn btn-secondary btn-view-photo" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-img="${escapeHtml(p.image)}" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px; font-size: 11.5px;">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        View
+                      </button>
+                      <button type="button" class="btn btn-secondary btn-quick-upload-img" data-id="${p.id}" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px; font-size: 11.5px; border-color: rgba(200,155,60,0.35);">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        Change
+                      </button>
+                      <button type="button" class="btn btn-action-delete btn-delete-photo" data-id="${p.id}" data-name="${escapeHtml(p.name)}" data-tooltip="Remove Photo">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                      </button>
+                    `
+                    : `
+                      <button type="button" class="btn btn-secondary btn-quick-upload-img" data-id="${p.id}" style="display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; font-size: 12px; font-weight: 600; border-color: rgba(200,155,60,0.35); color: var(--adm-text-main);">
+                        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                        + Upload Photo
+                      </button>
+                    `
+                }
+              </div>
               <div style="display: flex; gap: 6px;">
                 <button class="btn btn-action-edit btn-edit-prod" data-id="${p.id}" data-tooltip="Edit Product">
                   <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -1425,12 +1523,20 @@ function renderProductsTable(products) {
 
   // Bind actions
   const bindEvents = (element) => {
-    element.querySelectorAll(".btn-quick-upload-img").forEach((b) => {
-      b.addEventListener("click", () => triggerQuickImageUpload(b.getAttribute("data-id")));
+    element.querySelectorAll(".btn-view-photo, .prod-thumb-view").forEach((b) => {
+      b.addEventListener("click", () => {
+        openImageViewerModal(b.getAttribute("data-id"), b.getAttribute("data-name"), b.getAttribute("data-img"));
+      });
     });
 
-    element.querySelectorAll(".prod-thumb-click").forEach((thumb) => {
-      thumb.addEventListener("click", () => triggerQuickImageUpload(thumb.getAttribute("data-id")));
+    element.querySelectorAll(".btn-delete-photo").forEach((b) => {
+      b.addEventListener("click", () => {
+        deleteProductPhoto(b.getAttribute("data-id"), b.getAttribute("data-name"));
+      });
+    });
+
+    element.querySelectorAll(".btn-quick-upload-img, .prod-thumb-upload").forEach((b) => {
+      b.addEventListener("click", () => triggerQuickImageUpload(b.getAttribute("data-id")));
     });
 
     element.querySelectorAll(".btn-edit-prod").forEach((b) => {
@@ -1460,6 +1566,21 @@ const prodImageUrl = document.getElementById("prodImageUrl");
 const prodImagePreview = document.getElementById("prodImagePreview");
 const prodImagePlaceholderIcon = document.getElementById("prodImagePlaceholderIcon");
 const prodImageFileName = document.getElementById("prodImageFileName");
+const removeProdImageBtn = document.getElementById("removeProdImageBtn");
+
+if (removeProdImageBtn) {
+  removeProdImageBtn.addEventListener("click", () => {
+    if (prodImageUrl) prodImageUrl.value = "";
+    if (prodImageFile) prodImageFile.value = "";
+    if (prodImageFileName) prodImageFileName.textContent = "Photo removed (click Save)";
+    if (prodImagePreview && prodImagePlaceholderIcon) {
+      prodImagePreview.src = "";
+      prodImagePreview.style.display = "none";
+      prodImagePlaceholderIcon.style.display = "block";
+    }
+    removeProdImageBtn.style.display = "none";
+  });
+}
 
 if (productModal) {
   const addProdBtn = document.getElementById("addProductBtn");
@@ -1471,7 +1592,7 @@ if (productModal) {
 }
 
 // Modal Backdrop Dismiss
-[notesModal, replyModal, newRequestModal, productModal].forEach((m) => {
+[notesModal, replyModal, newRequestModal, productModal, imageViewerModal].forEach((m) => {
   if (m) {
     m.addEventListener("click", (e) => {
       if (e.target === m) m.style.display = "none";
@@ -1496,6 +1617,7 @@ function openProductModal(id) {
       if (prodImageUrl) prodImageUrl.value = img;
       if (prodImageFileName) prodImageFileName.textContent = img ? "Image configured" : "No file selected";
       if (prodImageFile) prodImageFile.value = "";
+      if (removeProdImageBtn) removeProdImageBtn.style.display = img ? "inline-flex" : "none";
       if (prodImagePreview && prodImagePlaceholderIcon) {
         if (img) {
           prodImagePreview.src = img;
@@ -1512,6 +1634,7 @@ function openProductModal(id) {
     productForm.reset();
     if (prodImageUrl) prodImageUrl.value = "";
     if (prodImageFileName) prodImageFileName.textContent = "No file selected";
+    if (removeProdImageBtn) removeProdImageBtn.style.display = "none";
     if (prodImagePreview && prodImagePlaceholderIcon) {
       prodImagePreview.src = "";
       prodImagePreview.style.display = "none";
@@ -1527,6 +1650,7 @@ if (prodImageFile) {
     const file = e.target.files[0];
     if (file) {
       if (prodImageFileName) prodImageFileName.textContent = file.name;
+      if (removeProdImageBtn) removeProdImageBtn.style.display = "inline-flex";
       const reader = new FileReader();
       reader.onload = (evt) => {
         const base64 = evt.target.result;
@@ -1545,6 +1669,7 @@ if (prodImageFile) {
 if (prodImageUrl) {
   prodImageUrl.addEventListener("input", () => {
     const url = prodImageUrl.value.trim();
+    if (removeProdImageBtn) removeProdImageBtn.style.display = url ? "inline-flex" : "none";
     if (prodImagePreview && prodImagePlaceholderIcon) {
       if (url) {
         prodImagePreview.src = url;
