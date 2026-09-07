@@ -295,11 +295,11 @@ async function loadPublicProducts() {
                 ? `<img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(p.name)}" class="product-img" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                    <div class="product-img-placeholder" style="display:none;">
                      <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-                     <span>Chemical Stock</span>
+                     <span>${escapeHtml(p.name)}</span>
                    </div>`
                 : `<div class="product-img-placeholder">
                      <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-                     <span>Chemical Stock</span>
+                     <span>${escapeHtml(p.name)}</span>
                    </div>`
             }
           </div>
@@ -314,25 +314,7 @@ async function loadPublicProducts() {
       `;
     }).join("");
 
-    const customCardHtml = `
-      <div class="product-card product-card--custom reveal is-visible">
-        <div class="product-img-wrap product-img-wrap--custom">
-          <div class="custom-chemical-placeholder">
-            <svg width="38" height="38" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            <span>Custom Sourcing</span>
-          </div>
-        </div>
-        <div class="product-card-body">
-          <h3>Any Other Chemical</h3>
-          <a class="product-card-cta product-card-cta--custom" href="#request" data-chemical="Custom / Unlisted Chemical">
-            <span>Request Any Chemical</span>
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-          </a>
-        </div>
-      </div>
-    `;
-
-    grid.innerHTML = cardsHtml + customCardHtml;
+    grid.innerHTML = cardsHtml;
 
     // Re-bind click prefill triggers for newly generated cards
     bindPrefillTriggers();
