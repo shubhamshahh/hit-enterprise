@@ -1249,6 +1249,58 @@ function formatProductStock(p) {
   `;
 }
 
+function showAdminToast(msg) {
+  let toast = document.getElementById("adminToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "adminToast";
+    toast.style.cssText = "position: fixed; bottom: 24px; right: 24px; background: #071019; color: #fff; border: 1px solid var(--color-accent, #C89B3C); padding: 12px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; gap: 10px; transition: all 0.3s ease; opacity: 0; transform: translateY(10px); pointer-events: none;";
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<svg width="18" height="18" fill="none" stroke="#C89B3C" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> <span>${escapeHtml(msg)}</span>`;
+  toast.style.opacity = "1";
+  toast.style.transform = "translateY(0)";
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(10px)";
+  }, 3200);
+}
+
+let activeUploadProdId = null;
+const quickImageUploadInput = document.getElementById("quickImageUploadInput");
+
+if (quickImageUploadInput) {
+  quickImageUploadInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (file && activeUploadProdId) {
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        const base64 = evt.target.result;
+        try {
+          showAdminToast("Uploading and saving product photo...");
+          await fetchAdmin(`/api/admin/products/${activeUploadProdId}`, {
+            method: "PUT",
+            body: JSON.stringify({ image: base64 }),
+          });
+          loadProducts();
+          showAdminToast("Product photo updated successfully!");
+        } catch (err) {
+          alert("Failed to update image: " + err.message);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    quickImageUploadInput.value = "";
+  });
+}
+
+function triggerQuickImageUpload(productId) {
+  activeUploadProdId = productId;
+  if (quickImageUploadInput) {
+    quickImageUploadInput.click();
+  }
+}
+
 function renderProductsTable(products) {
   const wrap = document.getElementById("productsTableWrap");
   if (!wrap) return;
@@ -1265,13 +1317,11 @@ function renderProductsTable(products) {
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width: 50px;">Photo</th>
+            <th style="width: 60px;">Photo</th>
             <th>Chemical Name</th>
             <th>Category</th>
-            <th>CAS No</th>
             <th>Inventory Stock</th>
-            <th>Purity / Grade</th>
-            <th>Packaging</th>
+            <th>Photo Action</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -1281,24 +1331,27 @@ function renderProductsTable(products) {
             return `
             <tr>
               <td>
-                <div style="width: 38px; height: 38px; border-radius: 8px; overflow: hidden; background: var(--adm-input-bg); border: 1px solid var(--adm-card-border); display: flex; align-items: center; justify-content: center;">
+                <div class="prod-thumb-click" data-id="${p.id}" title="Click to upload/change photo" style="width: 44px; height: 44px; border-radius: 8px; overflow: hidden; background: var(--adm-input-bg); border: 1px solid var(--adm-card-border); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;">
                   ${
                     hasImg
                       ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="display:none; color: var(--adm-text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`
-                      : `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: var(--adm-text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`
+                         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="display:none; color: var(--adm-text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`
+                      : `<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: var(--adm-text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`
                   }
                 </div>
               </td>
-              <td><strong>${escapeHtml(p.name)}</strong></td>
+              <td><strong style="font-size: 14.5px;">${escapeHtml(p.name)}</strong></td>
               <td><span class="category-pill">${escapeHtml(p.category)}</span></td>
-              <td><code>${escapeHtml(p.cas) || "&mdash;"}</code></td>
               <td>${formatProductStock(p)}</td>
-              <td>${escapeHtml(p.purity || p.grade || "&mdash;")}</td>
-              <td>${escapeHtml(p.packaging) || "&mdash;"}</td>
+              <td>
+                <button type="button" class="btn btn-secondary btn-quick-upload-img" data-id="${p.id}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; border-color: rgba(200,155,60,0.35); color: var(--adm-text-main); white-space: nowrap;">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                  ${hasImg ? 'Change Photo' : '+ Upload Photo'}
+                </button>
+              </td>
               <td>
                 <div style="display: flex; gap: 6px;">
-                  <button class="btn btn-action-edit btn-edit-prod" data-id="${p.id}" data-tooltip="Edit Product & Image">
+                  <button class="btn btn-action-edit btn-edit-prod" data-id="${p.id}" data-tooltip="Edit Chemical Details">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                   </button>
                   <button class="btn btn-action-delete btn-del-prod" data-id="${p.id}" data-tooltip="Delete Product">
@@ -1327,20 +1380,20 @@ function renderProductsTable(products) {
 
         return `
           <div class="mobile-data-card">
-            <div class="mobile-card-header" style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 36px; height: 36px; border-radius: 6px; overflow: hidden; background: var(--adm-input-bg); border: 1px solid var(--adm-card-border); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <div class="mobile-card-header" style="display: flex; align-items: center; gap: 12px;">
+              <div class="prod-thumb-click" data-id="${p.id}" title="Click to upload/change photo" style="width: 42px; height: 42px; border-radius: 8px; overflow: hidden; background: var(--adm-input-bg); border: 1px solid var(--adm-card-border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
                 ${
                   hasImg
                     ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" style="width: 100%; height: 100%; object-fit: cover;">`
-                    : `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: var(--adm-text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`
+                    : `<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: var(--adm-text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`
                 }
               </div>
-              <div>
-                <strong>${escapeHtml(p.name)}</strong>
+              <div style="flex: 1;">
+                <strong style="font-size: 14.5px;">${escapeHtml(p.name)}</strong>
               </div>
-              <span class="category-pill" style="margin-left: auto;">${escapeHtml(p.category)}</span>
+              <span class="category-pill">${escapeHtml(p.category)}</span>
             </div>
-            <div class="mobile-card-body">
+            <div class="mobile-card-body" style="padding-top: 8px;">
               <div class="mobile-card-row">
                 <span class="lbl">Inventory Stock:</span>
                 <span class="val" style="display:flex; align-items:center; gap:6px;">
@@ -1348,36 +1401,20 @@ function renderProductsTable(products) {
                   <span class="stock-status-pill ${badgeClass}">${statusLabel}</span>
                 </span>
               </div>
-              <div class="mobile-card-row">
-                <span class="lbl">CAS No:</span>
-                <span class="val"><code>${escapeHtml(p.cas) || "&mdash;"}</code></span>
-              </div>
-              <div class="mobile-card-row">
-                <span class="lbl">Spec/Purity:</span>
-                <span class="val">${escapeHtml(p.purity || p.grade || "&mdash;")}</span>
-              </div>
-              <div class="mobile-card-row">
-                <span class="lbl">Packaging:</span>
-                <span class="val">${escapeHtml(p.packaging) || "&mdash;"}</span>
-              </div>
-              
-              <div class="mobile-card-details" id="details-prod-${p.id}" style="display:none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--adm-topbar-border);">
-                <div class="mobile-card-row">
-                  <span class="lbl">Applications:</span>
-                  <span class="val">${escapeHtml(p.applications) || "&mdash;"}</span>
-                </div>
-              </div>
             </div>
-            <div class="mobile-card-footer" style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; width: 100%;">
-              <button class="btn btn-action-details btn-toggle-details" data-id="prod-${p.id}" data-tooltip="Show Details">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            <div class="mobile-card-footer" style="display: flex; gap: 8px; align-items: center; justify-content: space-between; width: 100%; margin-top: 10px;">
+              <button type="button" class="btn btn-secondary btn-quick-upload-img" data-id="${p.id}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; border-color: rgba(200,155,60,0.35); color: var(--adm-text-main);">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                ${hasImg ? 'Change Photo' : '+ Upload Photo'}
               </button>
-              <button class="btn btn-action-edit btn-edit-prod" data-id="${p.id}" data-tooltip="Edit Product">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-              </button>
-              <button class="btn btn-action-delete btn-del-prod" data-id="${p.id}" data-tooltip="Delete Product">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-              </button>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-action-edit btn-edit-prod" data-id="${p.id}" data-tooltip="Edit Product">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button class="btn btn-action-delete btn-del-prod" data-id="${p.id}" data-tooltip="Delete Product">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
             </div>
           </div>
         `;
@@ -1388,6 +1425,14 @@ function renderProductsTable(products) {
 
   // Bind actions
   const bindEvents = (element) => {
+    element.querySelectorAll(".btn-quick-upload-img").forEach((b) => {
+      b.addEventListener("click", () => triggerQuickImageUpload(b.getAttribute("data-id")));
+    });
+
+    element.querySelectorAll(".prod-thumb-click").forEach((thumb) => {
+      thumb.addEventListener("click", () => triggerQuickImageUpload(thumb.getAttribute("data-id")));
+    });
+
     element.querySelectorAll(".btn-edit-prod").forEach((b) => {
       b.addEventListener("click", () => openProductModal(b.getAttribute("data-id")));
     });
@@ -1398,17 +1443,8 @@ function renderProductsTable(products) {
         if (confirm("Delete this product from catalog?")) {
           await fetchAdmin(`/api/admin/products/${id}`, { method: "DELETE" });
           loadProducts();
+          showAdminToast("Product deleted from catalogue.");
         }
-      });
-    });
-
-    element.querySelectorAll(".btn-toggle-details").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-id");
-        const detailsPanel = element.querySelector(`#details-${id}`);
-        const isCollapsed = detailsPanel.style.display === "none";
-        detailsPanel.style.display = isCollapsed ? "block" : "none";
-        btn.setAttribute("data-tooltip", isCollapsed ? "Hide Details" : "Show Details");
       });
     });
   };
@@ -1444,7 +1480,7 @@ if (productModal) {
 });
 
 function openProductModal(id) {
-  document.getElementById("modalTitle").textContent = id ? "Edit Chemical Product & Stock" : "Add Chemical Product";
+  document.getElementById("modalTitle").textContent = id ? "Edit Chemical Product" : "Add Chemical Product";
   document.getElementById("prodId").value = id || "";
 
   if (id) {
@@ -1452,14 +1488,9 @@ function openProductModal(id) {
     if (prod) {
       document.getElementById("prodName").value = prod.name || "";
       document.getElementById("prodCategory").value = prod.category || "";
-      document.getElementById("prodCas").value = prod.cas || "";
-      document.getElementById("prodGrade").value = prod.grade || "";
-      document.getElementById("prodPurity").value = prod.purity || "";
-      document.getElementById("prodPackaging").value = prod.packaging || "";
       document.getElementById("prodStockQty").value = prod.stockQty !== undefined ? prod.stockQty : "";
       document.getElementById("prodStockUnit").value = prod.stockUnit || "Bags";
       document.getElementById("prodStockStatus").value = prod.stockStatus || "optimal";
-      document.getElementById("prodApplications").value = prod.applications || "";
       
       const img = prod.image || "";
       if (prodImageUrl) prodImageUrl.value = img;
@@ -1535,14 +1566,9 @@ if (productForm) {
     const payload = {
       name: document.getElementById("prodName").value,
       category: document.getElementById("prodCategory").value,
-      cas: document.getElementById("prodCas").value,
-      grade: document.getElementById("prodGrade").value,
-      purity: document.getElementById("prodPurity").value,
-      packaging: document.getElementById("prodPackaging").value,
       stockQty: document.getElementById("prodStockQty").value,
       stockUnit: document.getElementById("prodStockUnit").value,
       stockStatus: document.getElementById("prodStockStatus").value,
-      applications: document.getElementById("prodApplications").value,
       image: prodImageUrl ? prodImageUrl.value.trim() : "",
     };
 
@@ -1551,11 +1577,13 @@ if (productForm) {
         method: "PUT",
         body: JSON.stringify(payload),
       });
+      showAdminToast("Product updated successfully!");
     } else {
       await fetchAdmin("/api/admin/products", {
         method: "POST",
         body: JSON.stringify(payload),
       });
+      showAdminToast("Product added to catalogue successfully!");
     }
 
     productModal.style.display = "none";

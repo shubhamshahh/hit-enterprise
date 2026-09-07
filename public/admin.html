@@ -668,7 +668,7 @@
         <div class="form-row">
           <div class="form-group flex-2">
             <label>Chemical Name *</label>
-            <input type="text" id="prodName" required placeholder="e.g. Hydrochloric Acid">
+            <input type="text" id="prodName" required placeholder="e.g. Oxalic Acid">
           </div>
           <div class="form-group flex-1">
             <label>Category *</label>
@@ -676,24 +676,6 @@
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group flex-1">
-            <label>CAS Number</label>
-            <input type="text" id="prodCas" placeholder="e.g. 7647-01-0">
-          </div>
-          <div class="form-group flex-1">
-            <label>Grade / Specification</label>
-            <input type="text" id="prodGrade" placeholder="e.g. Technical Grade 37%">
-          </div>
-          <div class="form-group flex-1">
-            <label>Purity</label>
-            <input type="text" id="prodPurity" placeholder="e.g. 30% - 37%">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label>Packaging Options</label>
-            <input type="text" id="prodPackaging" placeholder="e.g. 30L Carboys, 200L HDPE Drums">
-          </div>
           <div class="form-group flex-1">
             <label>Stock Quantity</label>
             <input type="number" id="prodStockQty" placeholder="e.g. 230" min="0">
@@ -719,10 +701,6 @@
               <option value="out_of_stock">Out of Stock</option>
             </select>
           </div>
-        </div>
-        <div class="form-group">
-          <label>Key Applications</label>
-          <textarea id="prodApplications" rows="2" placeholder="e.g. Pickling, pH control, water treatment"></textarea>
         </div>
         <div class="form-group">
           <label>Product Display Image</label>
@@ -992,6 +970,9 @@
   </div>
 </div>
 
-<script src="admin.js?v=29"></script>
+<!-- HIDDEN FILE INPUT FOR DIRECT QUICK IMAGE UPLOADS FROM TABLE / CARDS -->
+<input type="file" id="quickImageUploadInput" accept="image/*" style="display:none;">
+
+<script src="admin.js?v=30"></script>
 </body>
 </html>
