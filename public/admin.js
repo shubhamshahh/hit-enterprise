@@ -1265,29 +1265,40 @@ function renderProductsTable(products) {
       <table class="data-table">
         <thead>
           <tr>
+            <th style="width: 50px;">Photo</th>
             <th>Chemical Name</th>
             <th>Category</th>
             <th>CAS No</th>
             <th>Inventory Stock</th>
             <th>Purity / Grade</th>
             <th>Packaging</th>
-            <th>Applications</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          ${products.map((p) => `
+          ${products.map((p) => {
+            const hasImg = p.image && p.image.trim();
+            return `
             <tr>
+              <td>
+                <div style="width: 38px; height: 38px; border-radius: 8px; overflow: hidden; background: var(--adm-input-bg); border: 1px solid var(--adm-card-border); display: flex; align-items: center; justify-content: center;">
+                  ${
+                    hasImg
+                      ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="display:none; color: var(--adm-text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`
+                      : `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: var(--adm-text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`
+                  }
+                </div>
+              </td>
               <td><strong>${escapeHtml(p.name)}</strong></td>
               <td><span class="category-pill">${escapeHtml(p.category)}</span></td>
               <td><code>${escapeHtml(p.cas) || "&mdash;"}</code></td>
               <td>${formatProductStock(p)}</td>
               <td>${escapeHtml(p.purity || p.grade || "&mdash;")}</td>
               <td>${escapeHtml(p.packaging) || "&mdash;"}</td>
-              <td style="max-width:180px; font-size: 12px;">${escapeHtml(p.applications) || "&mdash;"}</td>
               <td>
                 <div style="display: flex; gap: 6px;">
-                  <button class="btn btn-action-edit btn-edit-prod" data-id="${p.id}" data-tooltip="Edit Product & Stock">
+                  <button class="btn btn-action-edit btn-edit-prod" data-id="${p.id}" data-tooltip="Edit Product & Image">
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                   </button>
                   <button class="btn btn-action-delete btn-del-prod" data-id="${p.id}" data-tooltip="Delete Product">
@@ -1296,7 +1307,8 @@ function renderProductsTable(products) {
                 </div>
               </td>
             </tr>
-          `).join("")}
+          `;
+          }).join("")}
         </tbody>
       </table>
     </div>
@@ -1311,11 +1323,21 @@ function renderProductsTable(products) {
         else if (st === "low_stock" || st === "low stock") { badgeClass = "badge-low"; statusLabel = "Low Stock"; }
         else if (st === "reorder" || st === "reorder alert") { badgeClass = "badge-reorder"; statusLabel = "Reorder Alert"; }
         else if (st === "out_of_stock" || st === "out of stock") { badgeClass = "badge-danger"; statusLabel = "Out of Stock"; }
+        const hasImg = p.image && p.image.trim();
 
         return `
           <div class="mobile-data-card">
-            <div class="mobile-card-header">
-              <strong>${escapeHtml(p.name)}</strong>
+            <div class="mobile-card-header" style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 36px; height: 36px; border-radius: 6px; overflow: hidden; background: var(--adm-input-bg); border: 1px solid var(--adm-card-border); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                ${
+                  hasImg
+                    ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" style="width: 100%; height: 100%; object-fit: cover;">`
+                    : `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color: var(--adm-text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`
+                }
+              </div>
+              <div>
+                <strong>${escapeHtml(p.name)}</strong>
+              </div>
               <span class="category-pill" style="margin-left: auto;">${escapeHtml(p.category)}</span>
             </div>
             <div class="mobile-card-body">
@@ -1394,9 +1416,14 @@ function renderProductsTable(products) {
   bindEvents(wrap);
 }
 
-// Product Modal
+// Product Modal Elements
 const productModal = document.getElementById("productModal");
 const productForm = document.getElementById("productForm");
+const prodImageFile = document.getElementById("prodImageFile");
+const prodImageUrl = document.getElementById("prodImageUrl");
+const prodImagePreview = document.getElementById("prodImagePreview");
+const prodImagePlaceholderIcon = document.getElementById("prodImagePlaceholderIcon");
+const prodImageFileName = document.getElementById("prodImageFileName");
 
 if (productModal) {
   const addProdBtn = document.getElementById("addProductBtn");
@@ -1433,11 +1460,72 @@ function openProductModal(id) {
       document.getElementById("prodStockUnit").value = prod.stockUnit || "Bags";
       document.getElementById("prodStockStatus").value = prod.stockStatus || "optimal";
       document.getElementById("prodApplications").value = prod.applications || "";
+      
+      const img = prod.image || "";
+      if (prodImageUrl) prodImageUrl.value = img;
+      if (prodImageFileName) prodImageFileName.textContent = img ? "Image configured" : "No file selected";
+      if (prodImageFile) prodImageFile.value = "";
+      if (prodImagePreview && prodImagePlaceholderIcon) {
+        if (img) {
+          prodImagePreview.src = img;
+          prodImagePreview.style.display = "block";
+          prodImagePlaceholderIcon.style.display = "none";
+        } else {
+          prodImagePreview.src = "";
+          prodImagePreview.style.display = "none";
+          prodImagePlaceholderIcon.style.display = "block";
+        }
+      }
     }
   } else {
     productForm.reset();
+    if (prodImageUrl) prodImageUrl.value = "";
+    if (prodImageFileName) prodImageFileName.textContent = "No file selected";
+    if (prodImagePreview && prodImagePlaceholderIcon) {
+      prodImagePreview.src = "";
+      prodImagePreview.style.display = "none";
+      prodImagePlaceholderIcon.style.display = "block";
+    }
   }
   productModal.style.display = "flex";
+}
+
+// Image upload file listener
+if (prodImageFile) {
+  prodImageFile.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (prodImageFileName) prodImageFileName.textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const base64 = evt.target.result;
+        if (prodImageUrl) prodImageUrl.value = base64;
+        if (prodImagePreview && prodImagePlaceholderIcon) {
+          prodImagePreview.src = base64;
+          prodImagePreview.style.display = "block";
+          prodImagePlaceholderIcon.style.display = "none";
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+if (prodImageUrl) {
+  prodImageUrl.addEventListener("input", () => {
+    const url = prodImageUrl.value.trim();
+    if (prodImagePreview && prodImagePlaceholderIcon) {
+      if (url) {
+        prodImagePreview.src = url;
+        prodImagePreview.style.display = "block";
+        prodImagePlaceholderIcon.style.display = "none";
+      } else {
+        prodImagePreview.src = "";
+        prodImagePreview.style.display = "none";
+        prodImagePlaceholderIcon.style.display = "block";
+      }
+    }
+  });
 }
 
 if (productForm) {
@@ -1455,6 +1543,7 @@ if (productForm) {
       stockUnit: document.getElementById("prodStockUnit").value,
       stockStatus: document.getElementById("prodStockStatus").value,
       applications: document.getElementById("prodApplications").value,
+      image: prodImageUrl ? prodImageUrl.value.trim() : "",
     };
 
     if (id) {

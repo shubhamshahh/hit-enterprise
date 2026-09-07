@@ -37,7 +37,8 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this-password";
 
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 // Explicit page routes for Render/Linux deployment compatibility
@@ -194,6 +195,12 @@ app.get("/api/admin/export", requireAdmin, (req, res) => {
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", `attachment; filename=Hit_Enterprise_Inquiries_${Date.now()}.csv`);
   res.send(csv);
+});
+
+// Public Product Catalog (for website display)
+app.get("/api/products", (req, res) => {
+  const products = readAllProducts().filter((p) => p.status !== "inactive");
+  res.json(products);
 });
 
 // Product Catalog CRUD (Admin)

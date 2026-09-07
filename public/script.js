@@ -285,17 +285,34 @@ async function loadPublicProducts() {
       return;
     }
 
-    grid.innerHTML = products.map(p => `
-      <div class="product-card reveal is-visible">
-        <div class="product-card-top">
-          <h3>${escapeHtml(p.name)}</h3>
-          ${p.cas ? `<span class="product-cas">${escapeHtml(p.cas)}</span>` : ""}
+    grid.innerHTML = products.map((p) => {
+      const imageSrc = p.image && p.image.trim() ? p.image.trim() : "";
+      return `
+        <div class="product-card reveal is-visible">
+          <div class="product-img-wrap">
+            ${
+              imageSrc
+                ? `<img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(p.name)}" class="product-img" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                   <div class="product-img-placeholder" style="display:none;">
+                     <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                     <span>Chemical Stock</span>
+                   </div>`
+                : `<div class="product-img-placeholder">
+                     <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                     <span>Chemical Stock</span>
+                   </div>`
+            }
+          </div>
+          <div class="product-card-body">
+            <h3 title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h3>
+            <a class="product-card-cta" href="#request" data-chemical="${escapeHtml(p.name)}">
+              <span>Request Quote</span>
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </a>
+          </div>
         </div>
-        <p>${escapeHtml(p.applications || "Industrial chemical product.")}</p>
-        <span class="product-spec">${escapeHtml(p.purity || p.grade || "Technical Grade")}${p.packaging ? ` &middot; ${escapeHtml(p.packaging)}` : ""}</span>
-        <a class="product-card-cta" href="#request" data-chemical="${escapeHtml(p.name)}">Request this <span>&rarr;</span></a>
-      </div>
-    `).join("");
+      `;
+    }).join("");
 
     // Re-bind click prefill triggers for newly generated cards
     bindPrefillTriggers();

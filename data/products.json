@@ -11,7 +11,8 @@
     "stockUnit": "Bags",
     "stockStatus": "optimal",
     "applications": "Chelating agent used in water treatment, cleaning formulations and metal ion sequestration.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 2,
@@ -25,7 +26,8 @@
     "stockUnit": "Bags",
     "stockStatus": "optimal",
     "applications": "Bleaching, rust removal and metal surface cleaning agent.",
-    "status": "active"
+    "status": "active",
+    "image": "/images/products/oxalic-acid.jpg"
   },
   {
     "id": 3,
@@ -39,7 +41,8 @@
     "stockUnit": "Bags",
     "stockStatus": "adequate",
     "applications": "Sodium hydroxide for soap-making, textile processing and pH correction.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 4,
@@ -53,7 +56,8 @@
     "stockUnit": "Drums",
     "stockStatus": "optimal",
     "applications": "Humectant and industrial solvent for pharma, cosmetics and food-grade formulations.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 5,
@@ -67,7 +71,8 @@
     "stockUnit": "Drums",
     "stockStatus": "adequate",
     "applications": "Corrosion inhibitor and chemical intermediate for rubber, dye and pharma industries.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 6,
@@ -81,7 +86,8 @@
     "stockUnit": "Bags",
     "stockStatus": "optimal",
     "applications": "Alkali used in glass, soap and general chemical manufacturing.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 7,
@@ -95,7 +101,8 @@
     "stockUnit": "Bags",
     "stockStatus": "optimal",
     "applications": "Acidulant and chelating agent for food, pharma and cleaning applications.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 8,
@@ -109,7 +116,8 @@
     "stockUnit": "Bags",
     "stockStatus": "adequate",
     "applications": "Descaling and cleaning acid for industrial and domestic use.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 9,
@@ -123,7 +131,8 @@
     "stockUnit": "Bags",
     "stockStatus": "adequate",
     "applications": "Reducing agent for dye, paint and battery manufacturing.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 10,
@@ -137,7 +146,8 @@
     "stockUnit": "Carboys",
     "stockStatus": "optimal",
     "applications": "Industrial-grade HCl for pH control, descaling and textile processing.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 11,
@@ -151,7 +161,8 @@
     "stockUnit": "Bags",
     "stockStatus": "optimal",
     "applications": "Calcium oxide for water treatment, construction and effluent neutralization.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 12,
@@ -165,7 +176,8 @@
     "stockUnit": "Bags",
     "stockStatus": "low_stock",
     "applications": "Reducing and bleaching agent for water treatment and textile dyeing.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 13,
@@ -179,7 +191,8 @@
     "stockUnit": "Drums",
     "stockStatus": "optimal",
     "applications": "Solvent and cleaning agent for pharma, electronics and sanitization.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 14,
@@ -193,11 +206,12 @@
     "stockUnit": "Drums",
     "stockStatus": "reorder",
     "applications": "Industrial solvent for paints, coatings and adhesive formulations.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 15,
-    "name": "Hydrogen Peroxide (H₂O₂ 50%)",
+    "name": "Hydrogen Peroxide (H\u2082O\u2082 50%)",
     "cas": "7722-84-1",
     "grade": "Technical Grade 50%",
     "category": "Oxidizing Agents",
@@ -207,7 +221,8 @@
     "stockUnit": "Drums",
     "stockStatus": "reorder",
     "applications": "Bleaching agent for textiles, paper, effluent treatment and sanitization.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 16,
@@ -221,7 +236,8 @@
     "stockUnit": "Carboys",
     "stockStatus": "optimal",
     "applications": "Water disinfection, industrial bleaching and municipal water treatment.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 17,
@@ -235,7 +251,8 @@
     "stockUnit": "Carboys",
     "stockStatus": "optimal",
     "applications": "Fertilizer production, mineral processing, oil refining and wastewater treatment.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 18,
@@ -249,7 +266,8 @@
     "stockUnit": "Drums",
     "stockStatus": "adequate",
     "applications": "Textile dyeing, chemical synthesis, esters and acetate manufacturing.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 19,
@@ -263,7 +281,8 @@
     "stockUnit": "Bags",
     "stockStatus": "optimal",
     "applications": "Glass manufacturing, soaps & detergents, effluent treatment and metallurgy.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   },
   {
     "id": 20,
@@ -277,6 +296,7 @@
     "stockUnit": "Carboys",
     "stockStatus": "adequate",
     "applications": "Rust inhibitor, phosphate fertilizers, food additive and water treatment.",
-    "status": "active"
+    "status": "active",
+    "image": ""
   }
 ]
