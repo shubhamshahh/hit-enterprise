@@ -1,0 +1,17 @@
+{
+  "name": "Hit Enterprise - Industrial Chemical Supplier",
+  "short_name": "Hit Enterprise",
+  "description": "Leading industrial acids, alkalis, and solvents distributor in Bhavnagar, Gujarat with verified COA.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071019",
+  "theme_color": "#C89B3C",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

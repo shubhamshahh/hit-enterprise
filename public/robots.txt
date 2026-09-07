@@ -1,0 +1,8 @@
+# Robots.txt for Hit Enterprise (Chemical Supplier)
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /api/admin/
+
+# Search Engine Sitemap
+Sitemap: https://hit-enterprise.vercel.app/sitemap.xml

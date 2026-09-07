@@ -285,7 +285,7 @@ async function loadPublicProducts() {
       return;
     }
 
-    grid.innerHTML = products.map((p) => {
+    const cardsHtml = products.map((p) => {
       const imageSrc = p.image && p.image.trim() ? p.image.trim() : "";
       return `
         <div class="product-card reveal is-visible">
@@ -314,6 +314,26 @@ async function loadPublicProducts() {
       `;
     }).join("");
 
+    const customCardHtml = `
+      <div class="product-card product-card--custom reveal is-visible">
+        <div class="product-img-wrap product-img-wrap--custom">
+          <div class="custom-chemical-placeholder">
+            <svg width="38" height="38" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            <span>Custom Sourcing</span>
+          </div>
+        </div>
+        <div class="product-card-body">
+          <h3>Any Other Chemical</h3>
+          <a class="product-card-cta product-card-cta--custom" href="#request" data-chemical="Custom / Unlisted Chemical">
+            <span>Request Any Chemical</span>
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    `;
+
+    grid.innerHTML = cardsHtml + customCardHtml;
+
     // Re-bind click prefill triggers for newly generated cards
     bindPrefillTriggers();
     console.log("[Hit Enterprise] Dynamic catalog rendered successfully!");
@@ -327,8 +347,17 @@ async function loadPublicProducts() {
 function bindPrefillTriggers() {
   document.querySelectorAll("[data-chemical]").forEach((link) => {
     link.addEventListener("click", () => {
+      const chemVal = link.getAttribute("data-chemical");
       const field = document.getElementById("chemical");
-      if (field) field.value = link.getAttribute("data-chemical");
+      if (field) {
+        if (chemVal === "Custom / Unlisted Chemical") {
+          field.value = "";
+          field.placeholder = "Type your chemical name (e.g. Formic Acid, Bleaching Powder...)";
+          setTimeout(() => field.focus(), 150);
+        } else {
+          field.value = chemVal;
+        }
+      }
     });
   });
 }

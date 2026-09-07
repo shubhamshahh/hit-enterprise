@@ -544,6 +544,47 @@ p { color: var(--color-ink-soft); }
 .product-card-cta:hover { background: var(--color-accent); color: #071019; border-color: var(--color-accent); }
 .product-card-cta:hover svg { transform: translateX(3px); }
 
+/* Custom Chemical Sourcing Card */
+.product-card--custom {
+  background: linear-gradient(180deg, #0d1e30 0%, #08111e 100%);
+  border: 1.5px dashed rgba(200, 155, 60, 0.45);
+}
+.product-card--custom:hover {
+  border-color: var(--color-accent);
+  border-style: solid;
+}
+.product-card--custom .product-card-body h3 {
+  color: #FFFFFF;
+}
+.product-img-wrap--custom {
+  background: radial-gradient(circle at center, rgba(200, 155, 60, 0.15) 0%, rgba(7, 16, 25, 0.95) 75%);
+}
+.custom-chemical-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--color-accent-light);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.custom-chemical-placeholder svg {
+  color: var(--color-accent);
+  filter: drop-shadow(0 0 10px rgba(200, 155, 60, 0.4));
+  transition: transform 0.35s var(--ease);
+}
+.product-card--custom:hover .custom-chemical-placeholder svg {
+  transform: scale(1.15) rotate(90deg);
+}
+.product-card-cta--custom {
+  background: rgba(200, 155, 60, 0.18);
+  border-color: var(--color-accent);
+  color: #FFFFFF;
+}
+
 /* ---------- Industries ---------- */
 .industry-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
 .industry-cell {
@@ -593,6 +634,35 @@ p { color: var(--color-ink-soft); }
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 
+/* Custom Sourcing Highlight Box */
+.custom-sourcing-box {
+  margin-top: 24px;
+  padding: 18px 20px;
+  background: rgba(200, 155, 60, 0.08);
+  border: 1px solid rgba(200, 155, 60, 0.28);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+.custom-sourcing-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-accent-light);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.custom-sourcing-head strong {
+  color: #FFFFFF;
+  font-family: var(--font-display);
+}
+.custom-sourcing-box p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.75);
+}
+
 .form-card {
   background: rgba(255,255,255,0.04); backdrop-filter: blur(18px);
   border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 34px 34px 26px; color: #fff;
@@ -604,6 +674,38 @@ p { color: var(--color-ink-soft); }
 .field { display: flex; flex-direction: column; gap: 7px; }
 .field.full { grid-column: 1 / -1; }
 .field label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+
+/* Field Label Group & Badges */
+.field-label-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.field-label-group label {
+  margin-bottom: 0;
+}
+.field-badge-unlisted {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0B1729;
+  background: linear-gradient(135deg, var(--color-accent-light), var(--color-accent));
+  padding: 2px 8px;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(200, 155, 60, 0.35);
+}
+.field-help-text {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
 .field input, .field select, .field textarea {
   font-family: var(--font-body); font-size: 14.5px; padding: 13px 14px;
   border: 1.5px solid rgba(255,255,255,0.14); border-radius: var(--radius-sm);
@@ -751,35 +853,35 @@ p { color: var(--color-ink-soft); }
   margin-top: 16px;
   max-width: 320px;
 }
-.status-indicator {
+.footer-trust-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 22px;
+}
+.footer-trust-item {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 24px;
-  background: rgba(37, 211, 102, 0.05);
-  border: 1px solid rgba(37, 211, 102, 0.15);
-  padding: 6px 14px;
-  border-radius: 30px;
-}
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #25D366;
-  box-shadow: 0 0 8px #25D366;
-  animation: blinkStatus 1.6s infinite ease-in-out;
-}
-@keyframes blinkStatus {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
-}
-.status-text {
   font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #25D366;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #E2E8F0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 12px;
+  border-radius: 6px;
+  width: fit-content;
+  transition: all 0.25s ease;
+}
+.footer-trust-item svg {
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+.footer-trust-item:hover {
+  background: rgba(200, 155, 60, 0.08);
+  border-color: rgba(200, 155, 60, 0.3);
+  transform: translateX(2px);
 }
 .footer-col ul {
   list-style: none;
@@ -820,22 +922,40 @@ p { color: var(--color-ink-soft); }
   font-size: 12.5px !important;
   font-weight: 600;
 }
-.footer-badges {
+.footer-contact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
-.footer-badge {
-  font-family: var(--font-mono);
-  font-size: 11px;
+.footer-contact-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
   color: var(--color-ink-soft);
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--color-line);
-  padding: 8px 14px;
-  border-radius: 6px;
+  line-height: 1.5;
+}
+.footer-contact-list a {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  text-decoration: none;
+  color: var(--color-ink-soft);
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+.footer-contact-list a:hover {
+  color: #FFFFFF;
+  transform: translateX(2px);
+}
+.footer-address {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--color-ink-soft);
 }
 .footer-bottom {
   border-top: 1px solid var(--color-line);
