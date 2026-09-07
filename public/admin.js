@@ -333,9 +333,20 @@ function getStoredPassword() {
   return sessionStorage.getItem("hitAdminPassword");
 }
 
+function getInitialTab() {
+  const hash = window.location.hash ? window.location.hash.replace("#", "").trim().toLowerCase() : "";
+  const stored = sessionStorage.getItem("hitAdminActiveTab");
+  const validTabs = ["overview", "inquiries", "products", "settings"];
+  if (hash && validTabs.includes(hash)) return hash;
+  if (stored && validTabs.includes(stored)) return stored;
+  return "overview";
+}
+
 function showAdmin() {
   loginScreen.style.display = "none";
   adminScreen.style.display = "flex";
+  const initialTab = getInitialTab();
+  switchTab(initialTab, false);
   loadAllData();
 }
 
@@ -413,8 +424,35 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
   }
 });
 
+function openSubMenuGroup(groupId) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  const subMenu = group.querySelector(".sidebar-sub-menu");
+  const toggleBtn = group.querySelector(".tab-toggle-btn");
+  if (subMenu) {
+    subMenu.style.display = "block";
+    if (toggleBtn) {
+      toggleBtn.classList.add("menu-open");
+      const chevron = toggleBtn.querySelector(".chevron-icon");
+      if (chevron) chevron.style.transform = "rotate(90deg)";
+    }
+  }
+}
+
 function switchTab(tabId, shouldCloseMobile = true) {
+  if (!tabId) tabId = "overview";
   activeTab = tabId;
+
+  // Persist current tab in sessionStorage and URL hash
+  sessionStorage.setItem("hitAdminActiveTab", tabId);
+  if (window.location.hash !== `#${tabId}`) {
+    try {
+      history.replaceState(null, null, `#${tabId}`);
+    } catch (e) {
+      window.location.hash = tabId;
+    }
+  }
+
   document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
   document.querySelectorAll(".tab-pane").forEach((p) => p.classList.remove("active"));
 
@@ -422,6 +460,15 @@ function switchTab(tabId, shouldCloseMobile = true) {
   const targetPane = document.getElementById(`tab-${tabId}`);
   if (targetBtn) targetBtn.classList.add("active");
   if (targetPane) targetPane.classList.add("active");
+
+  // Open corresponding sub-menus in sidebar
+  if (tabId === "inquiries") {
+    openSubMenuGroup("menuGroupInquiries");
+  } else if (tabId === "products") {
+    openSubMenuGroup("menuGroupProducts");
+  } else if (tabId === "settings") {
+    openSubMenuGroup("menuGroupSettings");
+  }
 
   // Auto-close sidebar on mobile
   if (shouldCloseMobile) {
@@ -436,18 +483,16 @@ function switchTab(tabId, shouldCloseMobile = true) {
   if (tabId === "products") loadProducts();
 }
 
+window.addEventListener("hashchange", () => {
+  const tab = getInitialTab();
+  if (tab && tab !== activeTab) {
+    switchTab(tab, false);
+  }
+});
+
 document.getElementById("viewAllInquiriesBtn").addEventListener("click", () => {
   switchTab("inquiries");
-  // Open sub-menu if not already open
-  const group = document.getElementById("menuGroupInquiries");
-  const subMenu = group.querySelector(".sidebar-sub-menu");
-  const toggleBtn = group.querySelector(".tab-toggle-btn");
-  if (subMenu) {
-    subMenu.style.display = "block";
-    toggleBtn.classList.add("menu-open");
-    const chevron = toggleBtn.querySelector(".chevron-icon");
-    if (chevron) chevron.style.transform = "rotate(90deg)";
-  }
+  openSubMenuGroup("menuGroupInquiries");
 });
 
 document.getElementById("refreshStatsBtn").addEventListener("click", () => {
