@@ -350,5 +350,6 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// Initialise catalog fetching
+// Initialise triggers & catalog fetching
+bindPrefillTriggers();
 loadPublicProducts();
