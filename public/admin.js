@@ -303,28 +303,6 @@ if (subProductAddBtn) {
   });
 }
 
-// Bind Settings sub-menu clicks
-const subSettingsTestBtn = document.getElementById("subSettingsTestBtn");
-const subSettingsChannelsBtn = document.getElementById("subSettingsChannelsBtn");
-if (subSettingsTestBtn) {
-  subSettingsTestBtn.addEventListener("click", () => {
-    closeMobileSidebar();
-    document.querySelectorAll("#subMenuSettings .sub-tab-btn").forEach((b) => b.classList.remove("active"));
-    subSettingsTestBtn.classList.add("active");
-    switchTab("settings");
-    document.getElementById("settingsTestSection").scrollIntoView({ behavior: "smooth" });
-  });
-}
-if (subSettingsChannelsBtn) {
-  subSettingsChannelsBtn.addEventListener("click", () => {
-    closeMobileSidebar();
-    document.querySelectorAll("#subMenuSettings .sub-tab-btn").forEach((b) => b.classList.remove("active"));
-    subSettingsChannelsBtn.classList.add("active");
-    switchTab("settings");
-    document.getElementById("settingsChannelsSection").scrollIntoView({ behavior: "smooth" });
-  });
-}
-
 // Auth helper
 function getStoredUsername() {
   return sessionStorage.getItem("hitAdminUsername");
@@ -336,7 +314,7 @@ function getStoredPassword() {
 function getInitialTab() {
   const hash = window.location.hash ? window.location.hash.replace("#", "").trim().toLowerCase() : "";
   const stored = sessionStorage.getItem("hitAdminActiveTab");
-  const validTabs = ["overview", "inquiries", "products", "settings"];
+  const validTabs = ["overview", "inquiries", "products"];
   if (hash && validTabs.includes(hash)) return hash;
   if (stored && validTabs.includes(stored)) return stored;
   return "overview";
@@ -466,8 +444,6 @@ function switchTab(tabId, shouldCloseMobile = true) {
     openSubMenuGroup("menuGroupInquiries");
   } else if (tabId === "products") {
     openSubMenuGroup("menuGroupProducts");
-  } else if (tabId === "settings") {
-    openSubMenuGroup("menuGroupSettings");
   }
 
   // Auto-close sidebar on mobile
@@ -951,7 +927,7 @@ function inquiryCardHtml(r, index, isCompact) {
             ${r.email ? `
               <span class="meta-separator">•</span>
               <span class="meta-item">
-                <a href="mailto:${escapeHtml(r.email)}" class="contact-link email" title="Email ${escapeHtml(r.email)}">
+                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(r.email)}&su=${encodeURIComponent(`Quote Request Update for ${r.chemical} - Hit Enterprise`)}" target="_blank" rel="noopener noreferrer" class="contact-link email" title="Compose Gmail to ${escapeHtml(r.email)}">
                   <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline-block; vertical-align:middle; margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                   <span>${escapeHtml(r.email)}</span>
                 </a>
@@ -1067,11 +1043,15 @@ function openReplyModal(id) {
 
   replyInquiryId.value = id;
   
-  // Format summary header info
+  // Format summary header info with Gmail link if email exists
+  const emailHtml = record.email 
+    ? ` | <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(record.email)}&su=${encodeURIComponent(`Quote Request Update for ${record.chemical} - Hit Enterprise`)}" target="_blank" rel="noopener noreferrer" style="color: #EA4335; font-weight: 600; text-decoration: underline;" title="Compose in Gmail">${escapeHtml(record.email)}</a>`
+    : "";
+
   replyCustomerSummary.innerHTML = `
     <strong>Customer:</strong> ${escapeHtml(record.name)} ${record.company ? `(${escapeHtml(record.company)})` : ""}<br>
     <strong>Request:</strong> ${escapeHtml(record.chemical)} — ${escapeHtml(record.quantity)} ${escapeHtml(record.unit || "kg")}<br>
-    <strong>Contact:</strong> ${escapeHtml(record.phone)} ${record.email ? ` | ${escapeHtml(record.email)}` : ""}
+    <strong>Contact:</strong> ${escapeHtml(record.phone)}${emailHtml}
   `;
 
   // Default greeting template
@@ -1101,7 +1081,7 @@ if (replyModal) {
     });
   });
 
-  // Reply via Email Action
+  // Reply via Email Action (Direct Gmail Web Compose in browser)
   replyEmailBtn.addEventListener("click", async () => {
     const id = replyInquiryId.value;
     const record = inquiriesData.find((r) => String(r.id) === String(id));
@@ -1113,8 +1093,9 @@ if (replyModal) {
     const body = replyMessageInput.value;
     const subject = `Quote Request Update for ${record.chemical} - Hit Enterprise`;
     
-    // Open email client
-    window.open(`mailto:${encodeURIComponent(record.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
+    // Open Gmail web compose directly in a new tab
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(record.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, "_blank");
 
     // Automatically set status to contacted
     if (record.status === "new") {
@@ -1129,7 +1110,7 @@ if (replyModal) {
     replyModal.style.display = "none";
   });
 
-  // Reply via WhatsApp Action
+  // Reply via WhatsApp Action (Reuses existing WhatsApp tab and opens chat directly)
   replyWhatsappBtn.addEventListener("click", async () => {
     const id = replyInquiryId.value;
     const record = inquiriesData.find((r) => String(r.id) === String(id));
@@ -1143,8 +1124,19 @@ if (replyModal) {
 
     const body = replyMessageInput.value;
     
-    // Open WhatsApp
-    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(body)}`, "_blank");
+    // Direct WhatsApp chat URL
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const waUrl = isMobile 
+      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(body)}`
+      : `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(body)}`;
+
+    // Automatically copy message to clipboard so you can also easily paste it into any already open WhatsApp window
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(body).catch(() => {});
+    }
+
+    // Use named window target "WhatsAppWeb" so it reuses any open WhatsApp tab rather than opening duplicate tabs
+    window.open(waUrl, "WhatsAppWeb");
 
     // Automatically set status to contacted
     if (record.status === "new") {
@@ -1758,33 +1750,6 @@ if (productForm) {
 
     productModal.style.display = "none";
     loadProducts();
-  });
-}
-
-// -------------------------------------------------------------
-// SETTINGS / TEST NOTIFICATION
-// -------------------------------------------------------------
-const testNotifyBtn = document.getElementById("testNotifyBtn");
-const testNotifyResult = document.getElementById("testNotifyResult");
-
-if (testNotifyBtn) {
-  testNotifyBtn.addEventListener("click", async () => {
-    testNotifyResult.textContent = "Sending test notification...";
-    testNotifyResult.className = "notify-result pending";
-    testNotifyBtn.disabled = true;
-
-    const res = await fetchAdmin("/api/admin/test-notify", { method: "POST" });
-    testNotifyBtn.disabled = false;
-
-    if (res && res.ok) {
-      const data = await res.json();
-      testNotifyResult.textContent = data.message || "Test alert sent successfully!";
-      testNotifyResult.className = "notify-result success";
-    } else {
-      const errData = res ? await res.json() : {};
-      testNotifyResult.textContent = `Failed: ${errData.error || "Check server console or .env variables."}`;
-      testNotifyResult.className = "notify-result error";
-    }
   });
 }
 
