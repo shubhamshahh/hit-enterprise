@@ -265,7 +265,50 @@ if (form) {
   }
 }
 
-// Load and render products dynamically from server database
+const CATALOG_STORAGE_KEY = "hit_enterprise_catalog_v2";
+const CATALOG_BROADCAST_CHANNEL = "hit_catalog_sync";
+
+function renderProductGrid(products) {
+  const grid = document.getElementById("productGrid");
+  if (!grid || !Array.isArray(products) || !products.length) return;
+
+  const activeProducts = products.filter((p) => p.status !== "inactive");
+  if (!activeProducts.length) return;
+
+  const cardsHtml = activeProducts.map((p) => {
+    const imageSrc = p.image && p.image.trim() ? p.image.trim() : "";
+    return `
+      <div class="product-card reveal is-visible">
+        <div class="product-img-wrap">
+          ${
+            imageSrc
+              ? `<img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(p.name)}" class="product-img" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                 <div class="product-img-placeholder" style="display:none;">
+                   <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                   <span>${escapeHtml(p.name)}</span>
+                 </div>`
+              : `<div class="product-img-placeholder">
+                   <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                   <span>${escapeHtml(p.name)}</span>
+                 </div>`
+          }
+        </div>
+        <div class="product-card-body">
+          <h3 title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h3>
+          <a class="product-card-cta" href="#request" data-chemical="${escapeHtml(p.name)}">
+            <span>Request Quote</span>
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  grid.innerHTML = cardsHtml;
+  bindPrefillTriggers();
+}
+
+// Load and render products dynamically from server database & persistent client storage
 async function loadPublicProducts() {
   console.log("[Hit Enterprise] Initializing dynamic catalog fetch...");
   const grid = document.getElementById("productGrid");
@@ -274,57 +317,79 @@ async function loadPublicProducts() {
     return;
   }
 
+  // 1. Instant Cache-First render from localStorage (zero delay on refresh)
+  let cachedProducts = null;
+  try {
+    const raw = localStorage.getItem(CATALOG_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      cachedProducts = Array.isArray(parsed) ? parsed : (parsed.products || null);
+      if (cachedProducts && cachedProducts.length) {
+        renderProductGrid(cachedProducts);
+      }
+    }
+  } catch (_) {}
+
+  // 2. Fetch fresh catalog from server
   try {
     const res = await fetch("/api/products");
     if (!res.ok) throw new Error("Failed to fetch products from backend API");
-    const products = await res.json();
-    console.log("[Hit Enterprise] Catalog fetched successfully. Items count:", products.length);
+    const serverProducts = await res.json();
+    console.log("[Hit Enterprise] Catalog fetched successfully. Items count:", serverProducts.length);
 
-    if (!products || !products.length) {
-      console.log("[Hit Enterprise] Database catalog is empty. Displaying fallback HTML products.");
-      return;
+    if (Array.isArray(serverProducts) && serverProducts.length) {
+      let finalProducts = serverProducts;
+      // If local cache has photos that the server temporarily missed (e.g. server restart), preserve them
+      if (cachedProducts && Array.isArray(cachedProducts)) {
+        finalProducts = serverProducts.map((sp) => {
+          const cp = cachedProducts.find((x) => String(x.id) === String(sp.id));
+          if (cp && cp.image && cp.image.trim() && (!sp.image || !sp.image.trim())) {
+            return { ...sp, image: cp.image };
+          }
+          return sp;
+        });
+      }
+
+      renderProductGrid(finalProducts);
+
+      // Save to localStorage
+      try {
+        localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify({
+          timestamp: Date.now(),
+          products: finalProducts,
+        }));
+      } catch (_) {}
     }
-
-    const cardsHtml = products.map((p) => {
-      const imageSrc = p.image && p.image.trim() ? p.image.trim() : "";
-      return `
-        <div class="product-card reveal is-visible">
-          <div class="product-img-wrap">
-            ${
-              imageSrc
-                ? `<img src="${escapeHtml(imageSrc)}" alt="${escapeHtml(p.name)}" class="product-img" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                   <div class="product-img-placeholder" style="display:none;">
-                     <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-                     <span>${escapeHtml(p.name)}</span>
-                   </div>`
-                : `<div class="product-img-placeholder">
-                     <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-                     <span>${escapeHtml(p.name)}</span>
-                   </div>`
-            }
-          </div>
-          <div class="product-card-body">
-            <h3 title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h3>
-            <a class="product-card-cta" href="#request" data-chemical="${escapeHtml(p.name)}">
-              <span>Request Quote</span>
-              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-            </a>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    grid.innerHTML = cardsHtml;
-
-    // Re-bind click prefill triggers for newly generated cards
-    bindPrefillTriggers();
-    console.log("[Hit Enterprise] Dynamic catalog rendered successfully!");
-
   } catch (err) {
-    console.error("[Hit Enterprise] Error loading products catalog from server:", err);
-    // Keep fallback static HTML products
+    console.warn("[Hit Enterprise] Server fetch warning:", err.message);
+    // If server failed, cached products or static HTML remain intact
   }
 }
+
+// 3. Live Sync across tabs in real-time
+if (typeof BroadcastChannel !== "undefined") {
+  try {
+    const bc = new BroadcastChannel(CATALOG_BROADCAST_CHANNEL);
+    bc.onmessage = (evt) => {
+      if (evt.data && evt.data.type === "CATALOG_UPDATED" && Array.isArray(evt.data.products)) {
+        console.log("[Hit Enterprise] Real-time catalog update received!");
+        renderProductGrid(evt.data.products);
+      }
+    };
+  } catch (_) {}
+}
+
+window.addEventListener("storage", (e) => {
+  if (e.key === CATALOG_STORAGE_KEY && e.newValue) {
+    try {
+      const parsed = JSON.parse(e.newValue);
+      const prods = Array.isArray(parsed) ? parsed : (parsed.products || null);
+      if (prods && prods.length) {
+        renderProductGrid(prods);
+      }
+    } catch (_) {}
+  }
+});
 
 function bindPrefillTriggers() {
   document.querySelectorAll("[data-chemical]").forEach((link) => {

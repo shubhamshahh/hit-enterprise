@@ -12,7 +12,8 @@
     "stockStatus": "optimal",
     "applications": "Chelating agent used in water treatment, cleaning formulations and metal ion sequestration.",
     "status": "active",
-    "image": ""
+    "image": "",
+    "updatedAt": "2026-10-21T18:14:08.255Z"
   },
   {
     "id": 2,
@@ -42,7 +43,8 @@
     "stockStatus": "adequate",
     "applications": "Sodium hydroxide for soap-making, textile processing and pH correction.",
     "status": "active",
-    "image": ""
+    "image": "",
+    "updatedAt": "2026-10-21T18:14:10.813Z"
   },
   {
     "id": 4,
@@ -57,7 +59,8 @@
     "stockStatus": "optimal",
     "applications": "Humectant and industrial solvent for pharma, cosmetics and food-grade formulations.",
     "status": "active",
-    "image": ""
+    "image": "",
+    "updatedAt": "2026-10-21T18:14:14.004Z"
   },
   {
     "id": 5,
@@ -72,7 +75,8 @@
     "stockStatus": "adequate",
     "applications": "Corrosion inhibitor and chemical intermediate for rubber, dye and pharma industries.",
     "status": "active",
-    "image": ""
+    "image": "",
+    "updatedAt": "2026-10-21T18:02:06.823Z"
   },
   {
     "id": 6,
@@ -97,12 +101,13 @@
     "category": "Acids",
     "purity": "99.5%",
     "packaging": "25 kg Bag",
-    "stockQty": "210",
+    "stockQty": "220",
     "stockUnit": "Bags",
     "stockStatus": "optimal",
     "applications": "Acidulant and chelating agent for food, pharma and cleaning applications.",
     "status": "active",
-    "image": ""
+    "image": "",
+    "updatedAt": "2026-10-21T18:00:04.144Z"
   },
   {
     "id": 8,
@@ -211,7 +216,7 @@
   },
   {
     "id": 15,
-    "name": "Hydrogen Peroxide (H\u2082O\u2082 50%)",
+    "name": "Hydrogen Peroxide (H₂O₂ 50%)",
     "cas": "7722-84-1",
     "grade": "Technical Grade 50%",
     "category": "Oxidizing Agents",
@@ -256,7 +261,7 @@
   },
   {
     "id": 18,
-    "name": "Acetic Acid (Glacial 99.8%)",
+    "name": "Acetic Acid (Glacial)",
     "cas": "64-19-7",
     "grade": "Glacial 99.8%",
     "category": "Acids",
@@ -267,7 +272,8 @@
     "stockStatus": "adequate",
     "applications": "Textile dyeing, chemical synthesis, esters and acetate manufacturing.",
     "status": "active",
-    "image": ""
+    "image": "",
+    "updatedAt": "2026-10-21T18:13:42.489Z"
   },
   {
     "id": 19,

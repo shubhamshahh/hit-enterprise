@@ -1256,15 +1256,158 @@ if (newRequestForm) {
 }
 
 // -------------------------------------------------------------
+// PRODUCT CATALOG PERSISTENCE & IMAGE OPTIMIZER
+// -------------------------------------------------------------
+const CATALOG_STORAGE_KEY = "hit_enterprise_catalog_v2";
+const CATALOG_BROADCAST_CHANNEL = "hit_catalog_sync";
+
+/**
+ * Compresses any user image client-side to crisp, lightweight WebP/JPEG (~30-60KB).
+ * Prevents 413 payload errors, memory limits, and ensures permanent storage.
+ */
+function compressImage(file, options = {}) {
+  const maxWidth = options.maxWidth || 800;
+  const maxHeight = options.maxHeight || 800;
+  const quality = options.quality !== undefined ? options.quality : 0.82;
+
+  return new Promise((resolve, reject) => {
+    if (!file) return reject(new Error("No file selected."));
+    if (!file.type || !file.type.startsWith("image/")) {
+      return reject(new Error("Selected file is not an image (JPG, PNG, WebP supported)."));
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read image file."));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Could not decode image format."));
+      img.onload = () => {
+        let width = img.naturalWidth || img.width;
+        let height = img.naturalHeight || img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+
+        // Clean white background for transparent PNGs
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        let dataUrl;
+        try {
+          dataUrl = canvas.toDataURL("image/webp", quality);
+          if (!dataUrl || !dataUrl.startsWith("data:image/webp")) {
+            dataUrl = canvas.toDataURL("image/jpeg", quality);
+          }
+        } catch (_) {
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
+        }
+        resolve(dataUrl);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function getLocalCatalog() {
+  try {
+    const raw = localStorage.getItem(CATALOG_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : (parsed.products || null);
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveLocalCatalog(products) {
+  if (!Array.isArray(products)) return;
+  try {
+    localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      products: products,
+    }));
+
+    if (typeof BroadcastChannel !== "undefined") {
+      try {
+        const bc = new BroadcastChannel(CATALOG_BROADCAST_CHANNEL);
+        bc.postMessage({ type: "CATALOG_UPDATED", timestamp: Date.now(), products });
+        bc.close();
+      } catch (_) {}
+    }
+  } catch (err) {
+    console.warn("[Admin] localStorage write warning:", err.message);
+  }
+}
+
+// -------------------------------------------------------------
 // PRODUCT CATALOG MANAGER
 // -------------------------------------------------------------
 async function loadProducts() {
-  const res = await fetchAdmin("/api/admin/products");
-  if (!res || !res.ok) return;
-  productsData = await res.json();
-  renderProductsTable(productsData);
-  populateRequestChemicalDropdown(); // Re-populate request select drop down
-  renderDashboardWidgets(inquiriesData, productsData);
+  try {
+    const res = await fetchAdmin("/api/admin/products");
+    let serverProducts = null;
+    if (res && res.ok) {
+      serverProducts = await res.json();
+    }
+
+    const localProducts = getLocalCatalog();
+
+    if (serverProducts && Array.isArray(serverProducts)) {
+      // Check if local cache has custom images/edits that the server lost (e.g. Vercel instance restart)
+      if (localProducts && Array.isArray(localProducts)) {
+        const localImagesCount = localProducts.filter((p) => p.image && p.image.trim()).length;
+        const serverImagesCount = serverProducts.filter((p) => p.image && p.image.trim()).length;
+
+        if (localImagesCount > serverImagesCount) {
+          console.log(`[Admin] Local catalog has more photos (${localImagesCount}) than server (${serverImagesCount}). Auto-restoring to server...`);
+          serverProducts = serverProducts.map((sp) => {
+            const lp = localProducts.find((x) => String(x.id) === String(sp.id));
+            if (lp && lp.image && lp.image.trim() && (!sp.image || !sp.image.trim())) {
+              return { ...sp, image: lp.image };
+            }
+            return sp;
+          });
+
+          // Background auto-sync back to server
+          fetchAdmin("/api/admin/products/sync", {
+            method: "POST",
+            body: JSON.stringify({ products: serverProducts }),
+          }).catch((e) => console.warn("Auto-sync failed:", e));
+        }
+      }
+
+      productsData = serverProducts;
+      saveLocalCatalog(productsData);
+    } else if (localProducts && localProducts.length) {
+      productsData = localProducts;
+      showAdminToast("Loaded catalog from offline storage.", "info");
+    }
+
+    renderProductsTable(productsData);
+    populateRequestChemicalDropdown();
+    renderDashboardWidgets(inquiriesData, productsData);
+  } catch (err) {
+    console.error("loadProducts error:", err);
+    const local = getLocalCatalog();
+    if (local && local.length) {
+      productsData = local;
+      renderProductsTable(productsData);
+    }
+  }
 }
 
 function formatProductStock(p) {
@@ -1286,21 +1429,33 @@ function formatProductStock(p) {
   `;
 }
 
-function showAdminToast(msg) {
+function showAdminToast(msg, type = "success") {
   let toast = document.getElementById("adminToast");
   if (!toast) {
     toast = document.createElement("div");
     toast.id = "adminToast";
-    toast.style.cssText = "position: fixed; bottom: 24px; right: 24px; background: #071019; color: #fff; border: 1px solid var(--color-accent, #C89B3C); padding: 12px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; gap: 10px; transition: all 0.3s ease; opacity: 0; transform: translateY(10px); pointer-events: none;";
     document.body.appendChild(toast);
   }
-  toast.innerHTML = `<svg width="18" height="18" fill="none" stroke="#C89B3C" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> <span>${escapeHtml(msg)}</span>`;
+
+  const isErr = type === "error";
+  const isInfo = type === "info";
+  const borderCol = isErr ? "#ef4444" : isInfo ? "#38bdf8" : "var(--color-accent, #C89B3C)";
+  const icon = isErr
+    ? `<svg width="18" height="18" fill="none" stroke="#ef4444" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`
+    : isInfo
+    ? `<svg width="18" height="18" fill="none" stroke="#38bdf8" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01"/></svg>`
+    : `<svg width="18" height="18" fill="none" stroke="#C89B3C" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+
+  toast.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #071019; color: #fff; border: 1px solid ${borderCol}; padding: 12px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; gap: 10px; transition: all 0.3s ease; opacity: 0; transform: translateY(10px);`;
+  toast.innerHTML = `${icon} <span>${escapeHtml(msg)}</span>`;
   toast.style.opacity = "1";
   toast.style.transform = "translateY(0)";
-  setTimeout(() => {
+
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => {
     toast.style.opacity = "0";
     toast.style.transform = "translateY(10px)";
-  }, 3200);
+  }, isErr ? 4500 : 3200);
 }
 
 let activeUploadProdId = null;
@@ -1308,24 +1463,48 @@ const quickImageUploadInput = document.getElementById("quickImageUploadInput");
 
 if (quickImageUploadInput) {
   quickImageUploadInput.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files && e.target.files[0];
     if (file && activeUploadProdId) {
-      const reader = new FileReader();
-      reader.onload = async (evt) => {
-        const base64 = evt.target.result;
-        try {
-          showAdminToast("Uploading and saving product photo...");
-          await fetchAdmin(`/api/admin/products/${activeUploadProdId}`, {
-            method: "PUT",
-            body: JSON.stringify({ image: base64 }),
-          });
-          loadProducts();
-          showAdminToast("Product photo updated successfully!");
-        } catch (err) {
-          alert("Failed to update image: " + err.message);
+      const targetId = activeUploadProdId;
+      try {
+        showAdminToast("Compressing & uploading photo...", "info");
+        const compressedBase64 = await compressImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.82 });
+
+        // Optimistic update locally
+        const prod = productsData.find((p) => String(p.id) === String(targetId));
+        if (prod) {
+          prod.image = compressedBase64;
+          saveLocalCatalog(productsData);
+          renderProductsTable(productsData);
         }
-      };
-      reader.readAsDataURL(file);
+
+        const res = await fetchAdmin(`/api/admin/products/${targetId}`, {
+          method: "PUT",
+          body: JSON.stringify({ image: compressedBase64 }),
+        });
+
+        if (!res || !res.ok) {
+          let errText = "Server rejected image upload";
+          try {
+            const errJson = await res.json();
+            if (errJson && errJson.error) errText = errJson.error;
+          } catch (_) {}
+          throw new Error(errText);
+        }
+
+        const updatedProd = await res.json();
+        const idx = productsData.findIndex((p) => String(p.id) === String(targetId));
+        if (idx !== -1) {
+          productsData[idx] = { ...productsData[idx], ...updatedProd, image: compressedBase64 };
+        }
+        saveLocalCatalog(productsData);
+        renderProductsTable(productsData);
+        showAdminToast("Product photo updated and saved successfully!", "success");
+      } catch (err) {
+        console.error("Failed to upload image:", err);
+        showAdminToast("Failed to upload image: " + err.message, "error");
+        loadProducts();
+      }
     }
     quickImageUploadInput.value = "";
   });
@@ -1355,17 +1534,30 @@ async function deleteProductPhoto(id, name) {
   if (!id) return;
   if (confirm(`Remove photo for "${name || "this chemical"}"?`)) {
     try {
-      showAdminToast("Removing photo...");
-      await fetchAdmin(`/api/admin/products/${id}`, {
+      showAdminToast("Removing photo...", "info");
+      const prod = productsData.find((p) => String(p.id) === String(id));
+      if (prod) {
+        prod.image = "";
+        saveLocalCatalog(productsData);
+        renderProductsTable(productsData);
+      }
+
+      const res = await fetchAdmin(`/api/admin/products/${id}`, {
         method: "PUT",
         body: JSON.stringify({ image: "" }),
       });
+
+      if (!res || !res.ok) {
+        throw new Error("Server rejected photo removal");
+      }
+
       const viewerModal = document.getElementById("imageViewerModal");
       if (viewerModal) viewerModal.style.display = "none";
-      loadProducts();
-      showAdminToast("Photo removed successfully!");
+      await loadProducts();
+      showAdminToast("Photo removed successfully!", "success");
     } catch (err) {
-      alert("Failed to remove photo: " + err.message);
+      showAdminToast("Failed to remove photo: " + err.message, "error");
+      loadProducts();
     }
   }
 }
@@ -1681,24 +1873,26 @@ function openProductModal(id) {
   productModal.style.display = "flex";
 }
 
-// Image upload file listener
+// Image upload file listener in product modal
 if (prodImageFile) {
-  prodImageFile.addEventListener("change", (e) => {
-    const file = e.target.files[0];
+  prodImageFile.addEventListener("change", async (e) => {
+    const file = e.target.files && e.target.files[0];
     if (file) {
-      if (prodImageFileName) prodImageFileName.textContent = file.name;
+      if (prodImageFileName) prodImageFileName.textContent = file.name + " (optimizing...)";
       if (removeProdImageBtn) removeProdImageBtn.style.display = "inline-flex";
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const base64 = evt.target.result;
-        if (prodImageUrl) prodImageUrl.value = base64;
+      try {
+        const compressedBase64 = await compressImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.82 });
+        if (prodImageUrl) prodImageUrl.value = compressedBase64;
+        if (prodImageFileName) prodImageFileName.textContent = file.name + " (optimized)";
         if (prodImagePreview && prodImagePlaceholderIcon) {
-          prodImagePreview.src = base64;
+          prodImagePreview.src = compressedBase64;
           prodImagePreview.style.display = "block";
           prodImagePlaceholderIcon.style.display = "none";
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        alert("Image optimization failed: " + err.message);
+        if (prodImageFileName) prodImageFileName.textContent = "Error optimizing file";
+      }
     }
   });
 }
@@ -1725,31 +1919,84 @@ if (productForm) {
   productForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = document.getElementById("prodId").value;
-    const payload = {
-      name: document.getElementById("prodName").value,
-      category: document.getElementById("prodCategory").value,
-      stockQty: document.getElementById("prodStockQty").value,
-      stockUnit: document.getElementById("prodStockUnit").value,
-      stockStatus: document.getElementById("prodStockStatus").value,
-      image: prodImageUrl ? prodImageUrl.value.trim() : "",
-    };
-
-    if (id) {
-      await fetchAdmin(`/api/admin/products/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
-      showAdminToast("Product updated successfully!");
-    } else {
-      await fetchAdmin("/api/admin/products", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      showAdminToast("Product added to catalogue successfully!");
+    const saveBtn = productForm.querySelector('button[type="submit"]');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving...";
     }
 
-    productModal.style.display = "none";
-    loadProducts();
+    try {
+      let imageVal = prodImageUrl ? prodImageUrl.value.trim() : "";
+
+      // If user selected a new file that wasn't compressed yet
+      if (prodImageFile && prodImageFile.files && prodImageFile.files[0] && (!imageVal || !imageVal.startsWith("data:image/"))) {
+        imageVal = await compressImage(prodImageFile.files[0], { maxWidth: 800, maxHeight: 800, quality: 0.82 });
+      }
+
+      // If user is editing and didn't touch the image and didn't remove it, preserve existing image
+      if (id && !imageVal && (!removeProdImageBtn || removeProdImageBtn.style.display === "inline-flex")) {
+        const existing = productsData.find((p) => String(p.id) === String(id));
+        if (existing && existing.image) {
+          imageVal = existing.image;
+        }
+      }
+
+      const payload = {
+        name: document.getElementById("prodName").value.trim(),
+        category: document.getElementById("prodCategory").value.trim(),
+        stockQty: document.getElementById("prodStockQty").value.trim(),
+        stockUnit: document.getElementById("prodStockUnit").value,
+        stockStatus: document.getElementById("prodStockStatus").value,
+        image: imageVal,
+      };
+
+      if (!payload.name || !payload.category) {
+        throw new Error("Product name and category are required.");
+      }
+
+      let res;
+      if (id) {
+        res = await fetchAdmin(`/api/admin/products/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetchAdmin("/api/admin/products", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!res || !res.ok) {
+        let errText = "Server rejected product save";
+        try {
+          const errJson = await res.json();
+          if (errJson && errJson.error) errText = errJson.error;
+        } catch (_) {}
+        throw new Error(errText);
+      }
+
+      const savedProd = await res.json();
+      if (id) {
+        const idx = productsData.findIndex((p) => String(p.id) === String(id));
+        if (idx !== -1) productsData[idx] = { ...productsData[idx], ...savedProd };
+      } else if (savedProd) {
+        productsData.push(savedProd);
+      }
+      saveLocalCatalog(productsData);
+
+      showAdminToast(id ? "Product updated successfully!" : "Product added to catalogue successfully!", "success");
+      productModal.style.display = "none";
+      await loadProducts();
+    } catch (err) {
+      console.error("Save product error:", err);
+      showAdminToast(err.message, "error");
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = id ? "Save Changes" : "Add Product";
+      }
+    }
   });
 }
 
@@ -1889,27 +2136,59 @@ if (updateInventoryForm) {
     }
 
     const qtyInputs = updateInventoryForm.querySelectorAll(".inv-qty-input");
-    const updatePromises = Array.from(qtyInputs).map(async (input) => {
+    const updates = Array.from(qtyInputs).map((input) => {
       const id = input.getAttribute("data-id");
       const qty = input.value.trim();
       const unitEl = updateInventoryForm.querySelector(`.inv-unit-select[data-id="${id}"]`);
       const statusEl = updateInventoryForm.querySelector(`.inv-status-select[data-id="${id}"]`);
-      const unit = unitEl ? unitEl.value : "Bags";
-      const status = statusEl ? statusEl.value : "optimal";
-
-      return fetchAdmin(`/api/admin/products/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({ stockQty: qty, stockUnit: unit, stockStatus: status }),
-      });
+      return {
+        id,
+        stockQty: qty,
+        stockUnit: unitEl ? unitEl.value : "Bags",
+        stockStatus: statusEl ? statusEl.value : "optimal",
+      };
     });
 
-    await Promise.all(updatePromises);
-    if (saveBtn) {
-      saveBtn.disabled = false;
-      saveBtn.textContent = "Save All Stock Levels";
+    try {
+      showAdminToast("Saving inventory stock levels...", "info");
+      const res = await fetchAdmin("/api/admin/products/bulk-inventory", {
+        method: "POST",
+        body: JSON.stringify({ updates }),
+      });
+
+      if (!res || !res.ok) {
+        // Fallback to sequential updates if needed
+        for (const u of updates) {
+          await fetchAdmin(`/api/admin/products/${u.id}`, {
+            method: "PUT",
+            body: JSON.stringify({ stockQty: u.stockQty, stockUnit: u.stockUnit, stockStatus: u.stockStatus }),
+          });
+        }
+      }
+
+      // Update in memory and local storage
+      updates.forEach((u) => {
+        const prod = productsData.find((p) => String(p.id) === String(u.id));
+        if (prod) {
+          prod.stockQty = u.stockQty;
+          prod.stockUnit = u.stockUnit;
+          prod.stockStatus = u.stockStatus;
+        }
+      });
+      saveLocalCatalog(productsData);
+
+      showAdminToast("All inventory levels saved successfully!", "success");
+      closeUpdateInventory();
+      await loadProducts();
+    } catch (err) {
+      console.error("Inventory update error:", err);
+      showAdminToast("Failed to save inventory: " + err.message, "error");
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save All Stock Levels";
+      }
     }
-    closeUpdateInventory();
-    await loadProducts();
   });
 }
 

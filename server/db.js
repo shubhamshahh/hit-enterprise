@@ -7,26 +7,30 @@ const INQUIRIES_FILE = path.join(DATA_DIR, "inquiries.json");
 const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 
 const DEFAULT_PRODUCTS = [
-  { id: 1, name: "EDTA", cas: "60-00-4", grade: "Technical Grade 99%", category: "Chelating Agents", purity: "99%", packaging: "25 kg Bag", stockQty: "180", stockUnit: "Bags", stockStatus: "optimal", applications: "Chelating agent used in water treatment, cleaning formulations and metal ion sequestration.", status: "active" },
+  { id: 1, name: "EDTA", cas: "60-00-4", grade: "Technical Grade 99%", category: "Chelating Agents", purity: "99%", packaging: "25 kg Bag", stockQty: "180", stockUnit: "Bags", stockStatus: "optimal", applications: "Chelating agent used in water treatment, cleaning formulations and metal ion sequestration.", status: "active", image: "" },
   { id: 2, name: "Oxalic Acid", cas: "144-62-7", grade: "Industrial Grade 99.6%", category: "Acids", purity: "99.6%", packaging: "25 kg Bag", stockQty: "230", stockUnit: "Bags", stockStatus: "optimal", applications: "Bleaching, rust removal and metal surface cleaning agent.", status: "active", image: "/images/products/oxalic-acid.jpg" },
-  { id: 3, name: "Caustic Lye (Sodium Hydroxide)", cas: "1310-73-2", grade: "Rayon / Tech Grade", category: "Alkalis", purity: "Liquid 48% / Flakes 98%", packaging: "Carboy / 50kg Bag", stockQty: "120", stockUnit: "Bags", stockStatus: "adequate", applications: "Sodium hydroxide for soap-making, textile processing and pH correction.", status: "active" },
-  { id: 4, name: "Glycerine", cas: "56-81-5", grade: "Pharma / Tech Grade 99.5%", category: "Solvents", purity: "99.5%", packaging: "250 kg Drum", stockQty: "95", stockUnit: "Drums", stockStatus: "optimal", applications: "Humectant and industrial solvent for pharma, cosmetics and food-grade formulations.", status: "active" },
-  { id: 5, name: "Morpholine", cas: "110-91-8", grade: "Industrial Grade 99%", category: "Specialty Chemicals", purity: "99%", packaging: "200 kg Drum", stockQty: "40", stockUnit: "Drums", stockStatus: "adequate", applications: "Corrosion inhibitor and chemical intermediate for rubber, dye and pharma industries.", status: "active" },
-  { id: 6, name: "Potassium Carbonate / Hydroxide", cas: "584-08-7 / 1310-58-3", grade: "Tech Grade 99% / 90%", category: "Alkalis", purity: "99% / 90%", packaging: "25 kg Bag", stockQty: "150", stockUnit: "Bags", stockStatus: "optimal", applications: "Alkali used in glass, soap and general chemical manufacturing.", status: "active" },
-  { id: 7, name: "Citric Acid", cas: "77-92-9", grade: "Anhydrous 99.5%", category: "Acids", purity: "99.5%", packaging: "25 kg Bag", stockQty: "210", stockUnit: "Bags", stockStatus: "optimal", applications: "Acidulant and chelating agent for food, pharma and cleaning applications.", status: "active" },
-  { id: 8, name: "Sulphamic Acid", cas: "5329-14-6", grade: "Descaling Grade 99.5%", category: "Acids", purity: "99.5%", packaging: "25 kg Bag", stockQty: "110", stockUnit: "Bags", stockStatus: "adequate", applications: "Descaling and cleaning acid for industrial and domestic use.", status: "active" },
-  { id: 9, name: "Zinc Dust", cas: "7440-66-6", grade: "Industrial Grade 98%", category: "Inorganics", purity: "98%", packaging: "25 kg Bag", stockQty: "75", stockUnit: "Bags", stockStatus: "adequate", applications: "Reducing agent for dye, paint and battery manufacturing.", status: "active" },
-  { id: 10, name: "Hydrochloric Acid (HCl)", cas: "7647-01-0", grade: "Industrial Grade 30-35%", category: "Acids", purity: "30% - 35%", packaging: "30L Carboy / ISO Tanker", stockQty: "450", stockUnit: "Carboys", stockStatus: "optimal", applications: "Industrial-grade HCl for pH control, descaling and textile processing.", status: "active" },
-  { id: 11, name: "Lime (Powder / Lumps)", cas: "1305-78-8", grade: "High Calcium Oxide 90%", category: "Alkalis", purity: "90% CaO", packaging: "50 kg Bag", stockQty: "320", stockUnit: "Bags", stockStatus: "optimal", applications: "Calcium oxide for water treatment, construction and effluent neutralization.", status: "active" },
-  { id: 12, name: "SMBS (Sodium Metabisulfite)", cas: "7681-57-4", grade: "Tech Grade 97%", category: "Salts", purity: "97%", packaging: "25 / 50 kg Bag", stockQty: "80", stockUnit: "Bags", stockStatus: "low_stock", applications: "Reducing and bleaching agent for water treatment and textile dyeing.", status: "active" },
-  { id: 14, name: "Toluene", cas: "108-88-3", grade: "Industrial Grade 99.5%", category: "Solvents", purity: "99.5%", packaging: "200 kg Drum", stockQty: "60", stockUnit: "Drums", stockStatus: "reorder", applications: "Industrial solvent for paints, coatings and adhesive formulations.", status: "active" },
-  { id: 15, name: "Hydrogen Peroxide (H₂O₂ 50%)", cas: "7722-84-1", grade: "Technical Grade 50%", category: "Oxidizing Agents", purity: "50%", packaging: "30 kg Carboy / 250 kg Drum", stockQty: "60", stockUnit: "Drums", stockStatus: "reorder", applications: "Bleaching agent for textiles, paper, effluent treatment and sanitization.", status: "active" },
-  { id: 16, name: "Sodium Hypochlorite (10-12%)", cas: "7681-52-9", grade: "Commercial Grade 10-12%", category: "Disinfectants", purity: "10% - 12%", packaging: "35 kg Carboy / Tanker", stockQty: "140", stockUnit: "Carboys", stockStatus: "optimal", applications: "Water disinfection, industrial bleaching and municipal water treatment.", status: "active" },
-  { id: 17, name: "Sulfuric Acid (98%)", cas: "7664-93-9", grade: "Commercial Grade 98%", category: "Acids", purity: "98%", packaging: "35 kg Carboy / Tanker", stockQty: "200", stockUnit: "Carboys", stockStatus: "optimal", applications: "Fertilizer production, mineral processing, oil refining and wastewater treatment.", status: "active" },
-  { id: 18, name: "Acetic Acid (Glacial 99.8%)", cas: "64-19-7", grade: "Glacial 99.8%", category: "Acids", purity: "99.8%", packaging: "30 kg Carboy / 200 kg Drum", stockQty: "85", stockUnit: "Drums", stockStatus: "adequate", applications: "Textile dyeing, chemical synthesis, esters and acetate manufacturing.", status: "active" },
-  { id: 19, name: "Soda Ash (Sodium Carbonate)", cas: "497-19-8", grade: "Dense / Light 99.2%", category: "Alkalis", purity: "99.2%", packaging: "50 kg Bag", stockQty: "190", stockUnit: "Bags", stockStatus: "optimal", applications: "Glass manufacturing, soaps & detergents, effluent treatment and metallurgy.", status: "active" },
-  { id: 20, name: "Phosphoric Acid (85%)", cas: "7664-38-2", grade: "Technical Grade 85%", category: "Acids", purity: "85%", packaging: "35 kg Carboy / 280 kg Drum", stockQty: "70", stockUnit: "Carboys", stockStatus: "adequate", applications: "Rust inhibitor, phosphate fertilizers, food additive and water treatment.", status: "active" }
+  { id: 3, name: "Caustic Lye (Sodium Hydroxide)", cas: "1310-73-2", grade: "Rayon / Tech Grade", category: "Alkalis", purity: "Liquid 48% / Flakes 98%", packaging: "Carboy / 50kg Bag", stockQty: "120", stockUnit: "Bags", stockStatus: "adequate", applications: "Sodium hydroxide for soap-making, textile processing and pH correction.", status: "active", image: "" },
+  { id: 4, name: "Glycerine", cas: "56-81-5", grade: "Pharma / Tech Grade 99.5%", category: "Solvents", purity: "99.5%", packaging: "250 kg Drum", stockQty: "95", stockUnit: "Drums", stockStatus: "optimal", applications: "Humectant and industrial solvent for pharma, cosmetics and food-grade formulations.", status: "active", image: "" },
+  { id: 5, name: "Morpholine", cas: "110-91-8", grade: "Industrial Grade 99%", category: "Specialty Chemicals", purity: "99%", packaging: "200 kg Drum", stockQty: "40", stockUnit: "Drums", stockStatus: "adequate", applications: "Corrosion inhibitor and chemical intermediate for rubber, dye and pharma industries.", status: "active", image: "" },
+  { id: 6, name: "Potassium Carbonate / Hydroxide", cas: "584-08-7 / 1310-58-3", grade: "Tech Grade 99% / 90%", category: "Alkalis", purity: "99% / 90%", packaging: "25 kg Bag", stockQty: "150", stockUnit: "Bags", stockStatus: "optimal", applications: "Alkali used in glass, soap and general chemical manufacturing.", status: "active", image: "" },
+  { id: 7, name: "Citric Acid", cas: "77-92-9", grade: "Anhydrous 99.5%", category: "Acids", purity: "99.5%", packaging: "25 kg Bag", stockQty: "210", stockUnit: "Bags", stockStatus: "optimal", applications: "Acidulant and chelating agent for food, pharma and cleaning applications.", status: "active", image: "" },
+  { id: 8, name: "Sulphamic Acid", cas: "5329-14-6", grade: "Descaling Grade 99.5%", category: "Acids", purity: "99.5%", packaging: "25 kg Bag", stockQty: "110", stockUnit: "Bags", stockStatus: "adequate", applications: "Descaling and cleaning acid for industrial and domestic use.", status: "active", image: "" },
+  { id: 9, name: "Zinc Dust", cas: "7440-66-6", grade: "Industrial Grade 98%", category: "Inorganics", purity: "98%", packaging: "25 kg Bag", stockQty: "75", stockUnit: "Bags", stockStatus: "adequate", applications: "Reducing agent for dye, paint and battery manufacturing.", status: "active", image: "" },
+  { id: 10, name: "Hydrochloric Acid (HCl)", cas: "7647-01-0", grade: "Industrial Grade 30-35%", category: "Acids", purity: "30% - 35%", packaging: "30L Carboy / ISO Tanker", stockQty: "450", stockUnit: "Carboys", stockStatus: "optimal", applications: "Industrial-grade HCl for pH control, descaling and textile processing.", status: "active", image: "" },
+  { id: 11, name: "Lime (Powder / Lumps)", cas: "1305-78-8", grade: "High Calcium Oxide 90%", category: "Alkalis", purity: "90% CaO", packaging: "50 kg Bag", stockQty: "320", stockUnit: "Bags", stockStatus: "optimal", applications: "Calcium oxide for water treatment, construction and effluent neutralization.", status: "active", image: "" },
+  { id: 12, name: "SMBS (Sodium Metabisulfite)", cas: "7681-57-4", grade: "Tech Grade 97%", category: "Salts", purity: "97%", packaging: "25 / 50 kg Bag", stockQty: "80", stockUnit: "Bags", stockStatus: "low_stock", applications: "Reducing and bleaching agent for water treatment and textile dyeing.", status: "active", image: "" },
+  { id: 13, name: "IPA (Isopropyl Alcohol)", cas: "67-63-0", grade: "Pure Grade 99.9%", category: "Solvents", purity: "99.9%", packaging: "160 kg Drum", stockQty: "130", stockUnit: "Drums", stockStatus: "optimal", applications: "Solvent and cleaning agent for pharma, electronics and sanitization.", status: "active", image: "" },
+  { id: 14, name: "Toluene", cas: "108-88-3", grade: "Industrial Grade 99.5%", category: "Solvents", purity: "99.5%", packaging: "200 kg Drum", stockQty: "60", stockUnit: "Drums", stockStatus: "reorder", applications: "Industrial solvent for paints, coatings and adhesive formulations.", status: "active", image: "" },
+  { id: 15, name: "Hydrogen Peroxide (H₂O₂ 50%)", cas: "7722-84-1", grade: "Technical Grade 50%", category: "Oxidizing Agents", purity: "50%", packaging: "30 kg Carboy / 250 kg Drum", stockQty: "60", stockUnit: "Drums", stockStatus: "reorder", applications: "Bleaching agent for textiles, paper, effluent treatment and sanitization.", status: "active", image: "" },
+  { id: 16, name: "Sodium Hypochlorite (10-12%)", cas: "7681-52-9", grade: "Commercial Grade 10-12%", category: "Disinfectants", purity: "10% - 12%", packaging: "35 kg Carboy / Tanker", stockQty: "140", stockUnit: "Carboys", stockStatus: "optimal", applications: "Water disinfection, industrial bleaching and municipal water treatment.", status: "active", image: "" },
+  { id: 17, name: "Sulfuric Acid (98%)", cas: "7664-93-9", grade: "Commercial Grade 98%", category: "Acids", purity: "98%", packaging: "35 kg Carboy / Tanker", stockQty: "200", stockUnit: "Carboys", stockStatus: "optimal", applications: "Fertilizer production, mineral processing, oil refining and wastewater treatment.", status: "active", image: "" },
+  { id: 18, name: "Acetic Acid (Glacial 99.8%)", cas: "64-19-7", grade: "Glacial 99.8%", category: "Acids", purity: "99.8%", packaging: "30 kg Carboy / 200 kg Drum", stockQty: "85", stockUnit: "Drums", stockStatus: "adequate", applications: "Textile dyeing, chemical synthesis, esters and acetate manufacturing.", status: "active", image: "" },
+  { id: 19, name: "Soda Ash (Sodium Carbonate)", cas: "497-19-8", grade: "Dense / Light 99.2%", category: "Alkalis", purity: "99.2%", packaging: "50 kg Bag", stockQty: "190", stockUnit: "Bags", stockStatus: "optimal", applications: "Glass manufacturing, soaps & detergents, effluent treatment and metallurgy.", status: "active", image: "" },
+  { id: 20, name: "Phosphoric Acid (85%)", cas: "7664-38-2", grade: "Technical Grade 85%", category: "Acids", purity: "85%", packaging: "35 kg Carboy / 280 kg Drum", stockQty: "70", stockUnit: "Carboys", stockStatus: "adequate", applications: "Rust inhibitor, phosphate fertilizers, food additive and water treatment.", status: "active", image: "" }
 ];
+
+let productsCache = null;
+let inquiriesCache = null;
 
 function ensureStore() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -61,18 +65,53 @@ function ensureStore() {
 // Read JSON files safely
 function readJSON(file, fallback = []) {
   ensureStore();
+  if (file === PRODUCTS_FILE && productsCache) {
+    return productsCache.map((p) => ({ ...p }));
+  }
+  if (file === INQUIRIES_FILE && inquiriesCache) {
+    return inquiriesCache.map((i) => ({ ...i }));
+  }
+
   try {
-    const raw = fs.readFileSync(file, "utf-8");
-    return JSON.parse(raw || "[]");
+    if (fs.existsSync(file)) {
+      const raw = fs.readFileSync(file, "utf-8");
+      const parsed = JSON.parse(raw || "[]");
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        if (file === PRODUCTS_FILE) productsCache = parsed;
+        if (file === INQUIRIES_FILE) inquiriesCache = parsed;
+        return parsed.map((item) => ({ ...item }));
+      }
+    }
   } catch (err) {
     console.error(`Failed to read ${file}:`, err.message);
-    return fallback;
   }
+
+  const result = Array.isArray(fallback) ? fallback.map((x) => ({ ...x })) : fallback;
+  if (file === PRODUCTS_FILE && !productsCache) productsCache = result;
+  if (file === INQUIRIES_FILE && !inquiriesCache) inquiriesCache = result;
+  return result;
 }
 
 function writeJSON(file, data) {
   ensureStore();
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+  if (file === PRODUCTS_FILE) {
+    productsCache = Array.isArray(data) ? data.map((p) => ({ ...p })) : data;
+  }
+  if (file === INQUIRIES_FILE) {
+    inquiriesCache = Array.isArray(data) ? data.map((i) => ({ ...i })) : data;
+  }
+
+  const jsonStr = JSON.stringify(data, null, 2);
+  const tempFile = `${file}.tmp.${Date.now()}.${Math.random().toString(36).slice(2, 7)}`;
+  try {
+    fs.writeFileSync(tempFile, jsonStr, "utf-8");
+    fs.renameSync(tempFile, file);
+  } catch (err) {
+    try {
+      if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+    } catch (_) {}
+    fs.writeFileSync(file, jsonStr, "utf-8");
+  }
 }
 
 // INQUIRIES
@@ -230,6 +269,7 @@ function addProduct(product) {
     id: nextId,
     status: "active",
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     ...product,
   };
   products.push(newProduct);
@@ -241,7 +281,11 @@ function updateProduct(id, updates) {
   const products = readAllProducts();
   const idx = products.findIndex((p) => String(p.id) === String(id));
   if (idx === -1) return null;
-  products[idx] = { ...products[idx], ...updates };
+  products[idx] = {
+    ...products[idx],
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
   writeAllProducts(products);
   return products[idx];
 }
@@ -252,6 +296,56 @@ function deleteProduct(id) {
   if (filtered.length === products.length) return false;
   writeAllProducts(filtered);
   return true;
+}
+
+function bulkUpdateInventory(updatesList) {
+  if (!Array.isArray(updatesList) || !updatesList.length) return readAllProducts();
+  const products = readAllProducts();
+  const updateMap = new Map();
+  updatesList.forEach((u) => {
+    if (u && u.id !== undefined) updateMap.set(String(u.id), u);
+  });
+
+  let modified = false;
+  products.forEach((p) => {
+    const u = updateMap.get(String(p.id));
+    if (u) {
+      if (u.stockQty !== undefined && u.stockQty !== "") p.stockQty = String(u.stockQty).trim();
+      if (u.stockUnit !== undefined && u.stockUnit !== "") p.stockUnit = String(u.stockUnit).trim();
+      if (u.stockStatus !== undefined && u.stockStatus !== "") p.stockStatus = String(u.stockStatus).trim();
+      p.updatedAt = new Date().toISOString();
+      modified = true;
+    }
+  });
+
+  if (modified) {
+    writeAllProducts(products);
+  }
+  return products;
+}
+
+function syncAllProducts(incomingProducts) {
+  if (!Array.isArray(incomingProducts) || !incomingProducts.length) return readAllProducts();
+  const current = readAllProducts();
+  const map = new Map();
+  current.forEach((p) => map.set(String(p.id), { ...p }));
+
+  incomingProducts.forEach((inp) => {
+    if (inp && inp.id !== undefined) {
+      const existing = map.get(String(inp.id)) || {};
+      map.set(String(inp.id), {
+        ...existing,
+        ...inp,
+        // Preserve image if incoming has it, otherwise keep existing image if any
+        image: (inp.image && inp.image.trim()) ? inp.image.trim() : (existing.image || ""),
+        updatedAt: inp.updatedAt || new Date().toISOString(),
+      });
+    }
+  });
+
+  const merged = Array.from(map.values());
+  writeAllProducts(merged);
+  return merged;
 }
 
 module.exports = {
@@ -265,4 +359,6 @@ module.exports = {
   addProduct,
   updateProduct,
   deleteProduct,
+  bulkUpdateInventory,
+  syncAllProducts,
 };

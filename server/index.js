@@ -29,6 +29,8 @@ const {
   addProduct,
   updateProduct,
   deleteProduct,
+  bulkUpdateInventory,
+  syncAllProducts,
 } = require("./db");
 const { sendNotification } = require("./notify");
 
@@ -37,8 +39,8 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this-password";
 
-app.use(express.json({ limit: "15mb" }));
-app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 // Explicit page routes for Render/Linux deployment compatibility
@@ -120,7 +122,7 @@ app.post("/api/inquiries", rateLimiter(5, 60 * 1000), (req, res) => {
 
 // Public: Get product catalog
 app.get("/api/products", (req, res) => {
-  const products = readAllProducts().filter((p) => p.status === "active");
+  const products = readAllProducts().filter((p) => p.status !== "inactive");
   res.json(products);
 });
 
@@ -197,12 +199,6 @@ app.get("/api/admin/export", requireAdmin, (req, res) => {
   res.send(csv);
 });
 
-// Public Product Catalog (for website display)
-app.get("/api/products", (req, res) => {
-  const products = readAllProducts().filter((p) => p.status !== "inactive");
-  res.json(products);
-});
-
 // Product Catalog CRUD (Admin)
 app.get("/api/admin/products", requireAdmin, (req, res) => {
   res.json(readAllProducts());
@@ -227,6 +223,26 @@ app.delete("/api/admin/products/:id", requireAdmin, (req, res) => {
   const deleted = deleteProduct(req.params.id);
   if (!deleted) return res.status(404).json({ error: "Product not found." });
   res.json({ ok: true });
+});
+
+// Bulk Update Inventory Stock (Admin)
+app.post("/api/admin/products/bulk-inventory", requireAdmin, (req, res) => {
+  const updates = (req.body && req.body.updates) || [];
+  if (!Array.isArray(updates) || !updates.length) {
+    return res.status(400).json({ error: "Missing or invalid 'updates' array." });
+  }
+  const updated = bulkUpdateInventory(updates);
+  res.json({ ok: true, count: updated.length, products: updated });
+});
+
+// Full Catalog Sync / Restore (Admin)
+app.post("/api/admin/products/sync", requireAdmin, (req, res) => {
+  const products = (req.body && req.body.products) || [];
+  if (!Array.isArray(products) || !products.length) {
+    return res.status(400).json({ error: "Missing or invalid 'products' array." });
+  }
+  const synced = syncAllProducts(products);
+  res.json({ ok: true, count: synced.length, products: synced });
 });
 
 // Test Notification Endpoint
