@@ -318,51 +318,37 @@ async function loadPublicProducts() {
   }
 
   // 1. Instant Cache-First render from localStorage (zero delay on refresh)
-  let cachedProducts = null;
   try {
     const raw = localStorage.getItem(CATALOG_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      cachedProducts = Array.isArray(parsed) ? parsed : (parsed.products || null);
+      const cachedProducts = Array.isArray(parsed) ? parsed : (parsed.products || null);
       if (cachedProducts && cachedProducts.length) {
         renderProductGrid(cachedProducts);
       }
     }
   } catch (_) {}
 
-  // 2. Fetch fresh catalog from server
+  // 2. Fetch fresh catalog directly from server (Supabase is single source of truth)
   try {
     const res = await fetch("/api/products");
     if (!res.ok) throw new Error("Failed to fetch products from backend API");
     const serverProducts = await res.json();
-    console.log("[Hit Enterprise] Catalog fetched successfully. Items count:", serverProducts.length);
+    console.log("[Hit Enterprise] Catalog fetched successfully. Items count:", serverProducts ? serverProducts.length : 0);
 
-    if (Array.isArray(serverProducts) && serverProducts.length) {
-      let finalProducts = serverProducts;
-      // If local cache has photos that the server temporarily missed (e.g. server restart), preserve them
-      if (cachedProducts && Array.isArray(cachedProducts)) {
-        finalProducts = serverProducts.map((sp) => {
-          const cp = cachedProducts.find((x) => String(x.id) === String(sp.id));
-          if (cp && cp.image && cp.image.trim() && (!sp.image || !sp.image.trim())) {
-            return { ...sp, image: cp.image };
-          }
-          return sp;
-        });
-      }
+    if (Array.isArray(serverProducts)) {
+      renderProductGrid(serverProducts);
 
-      renderProductGrid(finalProducts);
-
-      // Save to localStorage
+      // Save fresh server state to localStorage
       try {
         localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify({
           timestamp: Date.now(),
-          products: finalProducts,
+          products: serverProducts,
         }));
       } catch (_) {}
     }
   } catch (err) {
     console.warn("[Hit Enterprise] Server fetch warning:", err.message);
-    // If server failed, cached products or static HTML remain intact
   }
 }
 

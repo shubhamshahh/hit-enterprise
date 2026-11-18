@@ -95,7 +95,26 @@ After that, `https://hitenterprise.com` (or whatever you buy) will load this
 site directly — no "Google upload" step needed; DNS is what makes a domain
 point at your hosted app.
 
-## 5. Get a WhatsApp notification for every new request
+## 5. Permanent Cloud Data & Image Safety with Supabase
+
+By default, the server runs in local storage mode. To ensure **100% permanent data safety** where product details, customer inquiries, and chemical photos uploaded by the Admin are permanently preserved across server restarts and serverless redeployments (such as on Vercel or Render):
+
+1. Create a free project on [Supabase](https://supabase.com).
+2. Go to **SQL Editor** in your Supabase dashboard, click **New query**, paste the contents of `supabase_schema.sql`, and click **Run**.
+   - This creates the `products` and `inquiries` tables.
+   - It creates the `product-images` storage bucket and configures global CDN public access.
+   - It pre-populates your 20 industrial chemical products.
+3. In your `.env` (or Vercel / Render environment variables), add:
+   ```env
+   SUPABASE_URL=https://your-project-id.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+   ```
+4. Restart your server.
+   - Any chemical image uploaded by the Admin is automatically converted and uploaded to Supabase Storage CDN (`product-images` bucket).
+   - The permanent Supabase image CDN URL is saved in PostgreSQL and immediately rendered to all website visitors.
+   - In the Admin header, a **"🟢 Supabase Cloud"** status badge will confirm the connection. You can click it anytime to sync existing local data to Supabase in one click.
+
+## 6. Get a WhatsApp notification for every new request
 
 The server can ping your own WhatsApp the moment someone submits the
 request form, using [CallMeBot](https://www.callmebot.com/blog/free-api-whatsapp-messages/)
@@ -122,7 +141,7 @@ need business verification and aren't free. The integration lives entirely
 in `server/notify.js` — swap that one file's contents when you're ready to
 move to either, nothing else needs to change.
 
-## 6. Security notes before going live
+## 7. Security notes before going live
 
 - Change `ADMIN_PASSWORD` in your host's environment variables — don't leave
   the default.

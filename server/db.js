@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const supabase = require("./supabase");
 
 const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 const DATA_DIR = isVercel ? path.join("/tmp", "hit_data") : path.join(__dirname, "..", "data");
@@ -8,7 +9,7 @@ const PRODUCTS_FILE = path.join(DATA_DIR, "products.json");
 
 const DEFAULT_PRODUCTS = [
   { id: 1, name: "EDTA", cas: "60-00-4", grade: "Technical Grade 99%", category: "Chelating Agents", purity: "99%", packaging: "25 kg Bag", stockQty: "180", stockUnit: "Bags", stockStatus: "optimal", applications: "Chelating agent used in water treatment, cleaning formulations and metal ion sequestration.", status: "active", image: "" },
-  { id: 2, name: "Oxalic Acid", cas: "144-62-7", grade: "Industrial Grade 99.6%", category: "Acids", purity: "99.6%", packaging: "25 kg Bag", stockQty: "230", stockUnit: "Bags", stockStatus: "optimal", applications: "Bleaching, rust removal and metal surface cleaning agent.", status: "active", image: "/images/products/oxalic-acid.jpg" },
+  { id: 2, name: "Oxalic Acid", cas: "144-62-7", grade: "Industrial Grade 99.6%", category: "Acids", purity: "99.6%", packaging: "25 kg Bag", stockQty: "230", stockUnit: "Bags", stockStatus: "optimal", applications: "Bleaching, rust removal and metal surface cleaning agent.", status: "active", image: "" },
   { id: 3, name: "Caustic Lye (Sodium Hydroxide)", cas: "1310-73-2", grade: "Rayon / Tech Grade", category: "Alkalis", purity: "Liquid 48% / Flakes 98%", packaging: "Carboy / 50kg Bag", stockQty: "120", stockUnit: "Bags", stockStatus: "adequate", applications: "Sodium hydroxide for soap-making, textile processing and pH correction.", status: "active", image: "" },
   { id: 4, name: "Glycerine", cas: "56-81-5", grade: "Pharma / Tech Grade 99.5%", category: "Solvents", purity: "99.5%", packaging: "250 kg Drum", stockQty: "95", stockUnit: "Drums", stockStatus: "optimal", applications: "Humectant and industrial solvent for pharma, cosmetics and food-grade formulations.", status: "active", image: "" },
   { id: 5, name: "Morpholine", cas: "110-91-8", grade: "Industrial Grade 99%", category: "Specialty Chemicals", purity: "99%", packaging: "200 kg Drum", stockQty: "40", stockUnit: "Drums", stockStatus: "adequate", applications: "Corrosion inhibitor and chemical intermediate for rubber, dye and pharma industries.", status: "active", image: "" },
@@ -62,7 +63,7 @@ function ensureStore() {
   }
 }
 
-// Read JSON files safely
+// Local JSON read helper
 function readJSON(file, fallback = []) {
   ensureStore();
   if (file === PRODUCTS_FILE && productsCache) {
@@ -92,6 +93,7 @@ function readJSON(file, fallback = []) {
   return result;
 }
 
+// Local JSON write helper
 function writeJSON(file, data) {
   ensureStore();
   if (file === PRODUCTS_FILE) {
@@ -114,34 +116,44 @@ function writeJSON(file, data) {
   }
 }
 
+// -------------------------------------------------------------
 // INQUIRIES
-function readAllInquiries() {
+// -------------------------------------------------------------
+
+async function readAllInquiries() {
+  if (supabase.isSupabaseConfigured()) {
+    return await supabase.getAllInquiries(readJSON(INQUIRIES_FILE, []));
+  }
   return readJSON(INQUIRIES_FILE, []);
 }
 
-function writeAllInquiries(records) {
-  writeJSON(INQUIRIES_FILE, records);
-}
+async function addInquiry(entry) {
+  if (supabase.isSupabaseConfigured()) {
+    try {
+      return await supabase.addInquiry(entry);
+    } catch (err) {
+      console.warn("[Database] Supabase addInquiry error, falling back to local:", err.message);
+    }
+  }
 
-function addInquiry(entry) {
-  const records = readAllInquiries();
+  const records = readJSON(INQUIRIES_FILE, []);
   const nextId = records.length ? Math.max(...records.map((r) => r.id || 0)) + 1 : 1001;
   const record = {
     id: nextId,
-    status: "new", // new, contacted, quoted, closed
-    source: "form", // form, email, whatsapp
+    status: "new",
+    source: "form",
     adminNotes: "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...entry,
   };
   records.push(record);
-  writeAllInquiries(records);
+  writeJSON(INQUIRIES_FILE, records);
   return record;
 }
 
-function listInquiries({ search = "", status = "all", source = "all" } = {}) {
-  let records = readAllInquiries();
+async function listInquiries({ search = "", status = "all", source = "all" } = {}) {
+  let records = await readAllInquiries();
 
   if (status && status !== "all") {
     records = records.filter((r) => r.status === status);
@@ -168,8 +180,16 @@ function listInquiries({ search = "", status = "all", source = "all" } = {}) {
   return records.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
-function updateInquiry(id, updates) {
-  const records = readAllInquiries();
+async function updateInquiry(id, updates) {
+  if (supabase.isSupabaseConfigured()) {
+    try {
+      return await supabase.updateInquiry(id, updates);
+    } catch (err) {
+      console.warn(`[Database] Supabase updateInquiry error, falling back to local:`, err.message);
+    }
+  }
+
+  const records = readJSON(INQUIRIES_FILE, []);
   const idx = records.findIndex((r) => String(r.id) === String(id));
   if (idx === -1) return null;
 
@@ -179,28 +199,40 @@ function updateInquiry(id, updates) {
     updatedAt: new Date().toISOString(),
   };
 
-  writeAllInquiries(records);
+  writeJSON(INQUIRIES_FILE, records);
   return records[idx];
 }
 
-function deleteInquiry(id) {
-  const records = readAllInquiries();
+async function deleteInquiry(id) {
+  if (supabase.isSupabaseConfigured()) {
+    try {
+      return await supabase.deleteInquiry(id);
+    } catch (err) {
+      console.warn(`[Database] Supabase deleteInquiry error, falling back to local:`, err.message);
+    }
+  }
+
+  const records = readJSON(INQUIRIES_FILE, []);
   const filtered = records.filter((r) => String(r.id) !== String(id));
   if (filtered.length === records.length) return false;
-  writeAllInquiries(filtered);
+  writeJSON(INQUIRIES_FILE, filtered);
   return true;
 }
 
+// -------------------------------------------------------------
 // DASHBOARD STATS
-function getStats() {
-  const records = readAllInquiries();
+// -------------------------------------------------------------
+
+async function getStats() {
+  const records = await readAllInquiries();
+  const products = await readAllProducts();
+
   const total = records.length;
   const newCount = records.filter((r) => r.status === "new").length;
   const contactedCount = records.filter((r) => r.status === "contacted").length;
   const quotedCount = records.filter((r) => r.status === "quoted").length;
   const closedCount = records.filter((r) => r.status === "closed").length;
 
-  // Calculate top requested chemical
   const counts = {};
   records.forEach((r) => {
     if (r.chemical) {
@@ -225,13 +257,12 @@ function getStats() {
     quotedCount,
     closedCount,
     topChemical,
-    productsCount: readAllProducts().length,
+    productsCount: products.length,
   };
 }
 
-// CSV EXPORT
-function exportInquiriesCSV() {
-  const records = listInquiries();
+async function exportInquiriesCSV() {
+  const records = await listInquiries();
   const headers = ["ID", "Status", "Date", "Customer Name", "Company", "Phone", "Email", "Chemical", "Quantity", "Unit", "Industry", "Notes", "Admin Notes"];
   
   const rows = records.map((r) => [
@@ -253,17 +284,28 @@ function exportInquiriesCSV() {
   return [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
 }
 
+// -------------------------------------------------------------
 // PRODUCTS CATALOG
-function readAllProducts() {
+// -------------------------------------------------------------
+
+async function readAllProducts() {
+  if (supabase.isSupabaseConfigured()) {
+    const prods = await supabase.getAllProducts();
+    return Array.isArray(prods) ? prods : [];
+  }
   return readJSON(PRODUCTS_FILE, DEFAULT_PRODUCTS);
 }
 
-function writeAllProducts(products) {
-  writeJSON(PRODUCTS_FILE, products);
-}
+async function addProduct(product) {
+  if (supabase.isSupabaseConfigured()) {
+    try {
+      return await supabase.addProduct(product);
+    } catch (err) {
+      console.warn("[Database] Supabase addProduct error, falling back to local:", err.message);
+    }
+  }
 
-function addProduct(product) {
-  const products = readAllProducts();
+  const products = readJSON(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const nextId = products.length ? Math.max(...products.map((p) => p.id || 0)) + 1 : 1;
   const newProduct = {
     id: nextId,
@@ -273,34 +315,59 @@ function addProduct(product) {
     ...product,
   };
   products.push(newProduct);
-  writeAllProducts(products);
+  writeJSON(PRODUCTS_FILE, products);
   return newProduct;
 }
 
-function updateProduct(id, updates) {
-  const products = readAllProducts();
+async function updateProduct(id, updates) {
+  if (supabase.isSupabaseConfigured()) {
+    try {
+      return await supabase.updateProduct(id, updates);
+    } catch (err) {
+      console.warn(`[Database] Supabase updateProduct error, falling back to local:`, err.message);
+    }
+  }
+
+  const products = readJSON(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const idx = products.findIndex((p) => String(p.id) === String(id));
   if (idx === -1) return null;
+
   products[idx] = {
     ...products[idx],
     ...updates,
     updatedAt: new Date().toISOString(),
   };
-  writeAllProducts(products);
+  writeJSON(PRODUCTS_FILE, products);
   return products[idx];
 }
 
-function deleteProduct(id) {
-  const products = readAllProducts();
+async function deleteProduct(id) {
+  if (supabase.isSupabaseConfigured()) {
+    try {
+      return await supabase.deleteProduct(id);
+    } catch (err) {
+      console.warn(`[Database] Supabase deleteProduct error, falling back to local:`, err.message);
+    }
+  }
+
+  const products = readJSON(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const filtered = products.filter((p) => String(p.id) !== String(id));
   if (filtered.length === products.length) return false;
-  writeAllProducts(filtered);
+  writeJSON(PRODUCTS_FILE, filtered);
   return true;
 }
 
-function bulkUpdateInventory(updatesList) {
-  if (!Array.isArray(updatesList) || !updatesList.length) return readAllProducts();
-  const products = readAllProducts();
+async function bulkUpdateInventory(updatesList) {
+  if (supabase.isSupabaseConfigured()) {
+    try {
+      return await supabase.bulkUpdateInventory(updatesList);
+    } catch (err) {
+      console.warn("[Database] Supabase bulkUpdateInventory error, falling back to local:", err.message);
+    }
+  }
+
+  if (!Array.isArray(updatesList) || !updatesList.length) return readJSON(PRODUCTS_FILE, DEFAULT_PRODUCTS);
+  const products = readJSON(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const updateMap = new Map();
   updatesList.forEach((u) => {
     if (u && u.id !== undefined) updateMap.set(String(u.id), u);
@@ -319,14 +386,22 @@ function bulkUpdateInventory(updatesList) {
   });
 
   if (modified) {
-    writeAllProducts(products);
+    writeJSON(PRODUCTS_FILE, products);
   }
   return products;
 }
 
-function syncAllProducts(incomingProducts) {
-  if (!Array.isArray(incomingProducts) || !incomingProducts.length) return readAllProducts();
-  const current = readAllProducts();
+async function syncAllProducts(incomingProducts) {
+  if (supabase.isSupabaseConfigured()) {
+    try {
+      return await supabase.syncAllProducts(incomingProducts);
+    } catch (err) {
+      console.warn("[Database] Supabase syncAllProducts error, falling back to local:", err.message);
+    }
+  }
+
+  if (!Array.isArray(incomingProducts) || !incomingProducts.length) return readJSON(PRODUCTS_FILE, DEFAULT_PRODUCTS);
+  const current = readJSON(PRODUCTS_FILE, DEFAULT_PRODUCTS);
   const map = new Map();
   current.forEach((p) => map.set(String(p.id), { ...p }));
 
@@ -336,7 +411,6 @@ function syncAllProducts(incomingProducts) {
       map.set(String(inp.id), {
         ...existing,
         ...inp,
-        // Preserve image if incoming has it, otherwise keep existing image if any
         image: (inp.image && inp.image.trim()) ? inp.image.trim() : (existing.image || ""),
         updatedAt: inp.updatedAt || new Date().toISOString(),
       });
@@ -344,8 +418,29 @@ function syncAllProducts(incomingProducts) {
   });
 
   const merged = Array.from(map.values());
-  writeAllProducts(merged);
+  writeJSON(PRODUCTS_FILE, merged);
   return merged;
+}
+
+// Database status & sync helper
+function getDatabaseStatus() {
+  const isCloud = supabase.isSupabaseConfigured();
+  return {
+    provider: isCloud ? "supabase" : "local",
+    isSupabaseConfigured: isCloud,
+    storageBucket: "product-images",
+    supabaseUrl: process.env.SUPABASE_URL || null,
+  };
+}
+
+async function clearAllImages() {
+  if (supabase.isSupabaseConfigured()) {
+    return await supabase.clearAllProductImages();
+  }
+  const products = readJSON(PRODUCTS_FILE, DEFAULT_PRODUCTS);
+  products.forEach((p) => (p.image = ""));
+  writeJSON(PRODUCTS_FILE, products);
+  return { ok: true };
 }
 
 module.exports = {
@@ -361,4 +456,7 @@ module.exports = {
   deleteProduct,
   bulkUpdateInventory,
   syncAllProducts,
+  getDatabaseStatus,
+  syncLocalToSupabase: supabase.syncLocalToSupabase,
+  clearAllImages,
 };

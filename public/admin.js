@@ -1359,42 +1359,15 @@ function saveLocalCatalog(products) {
 async function loadProducts() {
   try {
     const res = await fetchAdmin("/api/admin/products");
-    let serverProducts = null;
     if (res && res.ok) {
-      serverProducts = await res.json();
-    }
-
-    const localProducts = getLocalCatalog();
-
-    if (serverProducts && Array.isArray(serverProducts)) {
-      // Check if local cache has custom images/edits that the server lost (e.g. Vercel instance restart)
-      if (localProducts && Array.isArray(localProducts)) {
-        const localImagesCount = localProducts.filter((p) => p.image && p.image.trim()).length;
-        const serverImagesCount = serverProducts.filter((p) => p.image && p.image.trim()).length;
-
-        if (localImagesCount > serverImagesCount) {
-          console.log(`[Admin] Local catalog has more photos (${localImagesCount}) than server (${serverImagesCount}). Auto-restoring to server...`);
-          serverProducts = serverProducts.map((sp) => {
-            const lp = localProducts.find((x) => String(x.id) === String(sp.id));
-            if (lp && lp.image && lp.image.trim() && (!sp.image || !sp.image.trim())) {
-              return { ...sp, image: lp.image };
-            }
-            return sp;
-          });
-
-          // Background auto-sync back to server
-          fetchAdmin("/api/admin/products/sync", {
-            method: "POST",
-            body: JSON.stringify({ products: serverProducts }),
-          }).catch((e) => console.warn("Auto-sync failed:", e));
-        }
-      }
-
-      productsData = serverProducts;
+      const serverProducts = await res.json();
+      productsData = Array.isArray(serverProducts) ? serverProducts : [];
       saveLocalCatalog(productsData);
-    } else if (localProducts && localProducts.length) {
-      productsData = localProducts;
-      showAdminToast("Loaded catalog from offline storage.", "info");
+    } else {
+      const local = getLocalCatalog();
+      if (local && Array.isArray(local)) {
+        productsData = local;
+      }
     }
 
     renderProductsTable(productsData);
@@ -1403,7 +1376,7 @@ async function loadProducts() {
   } catch (err) {
     console.error("loadProducts error:", err);
     const local = getLocalCatalog();
-    if (local && local.length) {
+    if (local && Array.isArray(local)) {
       productsData = local;
       renderProductsTable(productsData);
     }
@@ -1493,13 +1466,14 @@ if (quickImageUploadInput) {
         }
 
         const updatedProd = await res.json();
+        const finalImage = (updatedProd && updatedProd.image) ? updatedProd.image : compressedBase64;
         const idx = productsData.findIndex((p) => String(p.id) === String(targetId));
         if (idx !== -1) {
-          productsData[idx] = { ...productsData[idx], ...updatedProd, image: compressedBase64 };
+          productsData[idx] = { ...productsData[idx], ...updatedProd, image: finalImage };
         }
         saveLocalCatalog(productsData);
         renderProductsTable(productsData);
-        showAdminToast("Product photo updated and saved successfully!", "success");
+        showAdminToast("Product photo updated and saved safely!", "success");
       } catch (err) {
         console.error("Failed to upload image:", err);
         showAdminToast("Failed to upload image: " + err.message, "error");
@@ -1607,7 +1581,6 @@ function renderProductsTable(products) {
             <th style="width: 60px;">Photo</th>
             <th>Chemical Name</th>
             <th>Category</th>
-            <th>Inventory Stock</th>
             <th>Photo Actions</th>
             <th>Actions</th>
           </tr>
@@ -1629,7 +1602,6 @@ function renderProductsTable(products) {
               </td>
               <td><strong style="font-size: 14.5px;">${escapeHtml(p.name)}</strong></td>
               <td><span class="category-pill">${escapeHtml(p.category)}</span></td>
-              <td>${formatProductStock(p)}</td>
               <td>
                 <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                   ${
@@ -1676,13 +1648,6 @@ function renderProductsTable(products) {
     <!-- MOBILE VIEW (CARDS LIST) -->
     <div class="mobile-only mobile-cards-list">
       ${products.map((p) => {
-        const st = (p.stockStatus || "optimal").toLowerCase();
-        let badgeClass = "badge-opt";
-        let statusLabel = "Optimal";
-        if (st === "adequate") { badgeClass = "badge-adeq"; statusLabel = "Adequate"; }
-        else if (st === "low_stock" || st === "low stock") { badgeClass = "badge-low"; statusLabel = "Low Stock"; }
-        else if (st === "reorder" || st === "reorder alert") { badgeClass = "badge-reorder"; statusLabel = "Reorder Alert"; }
-        else if (st === "out_of_stock" || st === "out of stock") { badgeClass = "badge-danger"; statusLabel = "Out of Stock"; }
         const hasImg = p.image && p.image.trim();
 
         return `
@@ -1699,15 +1664,6 @@ function renderProductsTable(products) {
                 <strong style="font-size: 14.5px;">${escapeHtml(p.name)}</strong>
               </div>
               <span class="category-pill">${escapeHtml(p.category)}</span>
-            </div>
-            <div class="mobile-card-body" style="padding-top: 8px;">
-              <div class="mobile-card-row">
-                <span class="lbl">Inventory Stock:</span>
-                <span class="val" style="display:flex; align-items:center; gap:6px;">
-                  <strong class="font-mono">${escapeHtml(p.stockQty || '--')} ${escapeHtml(p.stockUnit || '')}</strong>
-                  <span class="stock-status-pill ${badgeClass}">${statusLabel}</span>
-                </span>
-              </div>
             </div>
             <div class="mobile-card-footer" style="display: flex; gap: 8px; align-items: center; justify-content: space-between; width: 100%; margin-top: 10px; flex-wrap: wrap;">
               <div style="display: flex; gap: 6px; align-items: center;">
@@ -1838,9 +1794,6 @@ function openProductModal(id) {
     if (prod) {
       document.getElementById("prodName").value = prod.name || "";
       document.getElementById("prodCategory").value = prod.category || "";
-      document.getElementById("prodStockQty").value = prod.stockQty !== undefined ? prod.stockQty : "";
-      document.getElementById("prodStockUnit").value = prod.stockUnit || "Bags";
-      document.getElementById("prodStockStatus").value = prod.stockStatus || "optimal";
       
       const img = prod.image || "";
       if (prodImageUrl) prodImageUrl.value = img;
@@ -1944,9 +1897,6 @@ if (productForm) {
       const payload = {
         name: document.getElementById("prodName").value.trim(),
         category: document.getElementById("prodCategory").value.trim(),
-        stockQty: document.getElementById("prodStockQty").value.trim(),
-        stockUnit: document.getElementById("prodStockUnit").value,
-        stockStatus: document.getElementById("prodStockStatus").value,
         image: imageVal,
       };
 
@@ -2060,140 +2010,8 @@ if (sideAddChemicalBtn) {
   });
 }
 
-// 3. + Update Inventory Action
-const updateInventoryModal = document.getElementById("updateInventoryModal");
-const closeUpdateInventoryModal = document.getElementById("closeUpdateInventoryModal");
-const cancelUpdateInventoryModal = document.getElementById("cancelUpdateInventoryModal");
-const updateInventoryForm = document.getElementById("updateInventoryForm");
-
-function openUpdateInventoryModal() {
-  closeMobileSidebar();
-  const listWrap = document.getElementById("inventoryDynamicList");
-  if (listWrap && productsData.length) {
-    listWrap.innerHTML = productsData.map(p => {
-      const qty = p.stockQty !== undefined ? p.stockQty : "";
-      const unit = p.stockUnit || "Bags";
-      const st = (p.stockStatus || "optimal").toLowerCase();
-      return `
-        <div class="form-row" style="align-items: center; gap: 10px; padding: 10px 12px; background: var(--adm-input-bg); border-radius: 8px; border: 1px solid var(--adm-card-border); margin-bottom: 2px;">
-          <div class="form-group flex-2" style="min-width: 160px; margin-bottom: 0;">
-            <label style="font-weight: 700; margin-bottom: 2px; font-size: 13px;">${escapeHtml(p.name)}</label>
-            <span style="font-size: 11px; color: var(--adm-text-muted);">${escapeHtml(p.category || '')} • ${escapeHtml(p.packaging || '')}</span>
-          </div>
-          <div class="form-group flex-1" style="min-width: 90px; margin-bottom: 0;">
-            <label style="font-size: 11px;">Stock Qty</label>
-            <input type="number" class="inv-qty-input" data-id="${p.id}" value="${escapeHtml(qty)}" placeholder="e.g. 100" min="0">
-          </div>
-          <div class="form-group flex-1" style="min-width: 90px; margin-bottom: 0;">
-            <label style="font-size: 11px;">Unit</label>
-            <select class="inv-unit-select" data-id="${p.id}">
-              <option value="Bags" ${unit === "Bags" ? "selected" : ""}>Bags</option>
-              <option value="Drums" ${unit === "Drums" ? "selected" : ""}>Drums</option>
-              <option value="Carboys" ${unit === "Carboys" ? "selected" : ""}>Carboys</option>
-              <option value="MT" ${unit === "MT" ? "selected" : ""}>MT</option>
-              <option value="kg" ${unit === "kg" ? "selected" : ""}>kg</option>
-              <option value="Liters" ${unit === "Liters" ? "selected" : ""}>Liters</option>
-            </select>
-          </div>
-          <div class="form-group flex-1" style="min-width: 120px; margin-bottom: 0;">
-            <label style="font-size: 11px;">Status</label>
-            <select class="inv-status-select" data-id="${p.id}">
-              <option value="optimal" ${st === "optimal" ? "selected" : ""}>Optimal</option>
-              <option value="adequate" ${st === "adequate" ? "selected" : ""}>Adequate</option>
-              <option value="low_stock" ${st === "low_stock" || st === "low stock" ? "selected" : ""}>Low Stock</option>
-              <option value="reorder" ${st === "reorder" || st === "reorder alert" ? "selected" : ""}>Reorder Alert</option>
-              <option value="out_of_stock" ${st === "out_of_stock" || st === "out of stock" ? "selected" : ""}>Out of Stock</option>
-            </select>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-  if (updateInventoryModal) updateInventoryModal.style.display = "flex";
-}
-function closeUpdateInventory() {
-  if (updateInventoryModal) updateInventoryModal.style.display = "none";
-}
-if (sideUpdateInventoryBtn) sideUpdateInventoryBtn.addEventListener("click", openUpdateInventoryModal);
-if (closeUpdateInventoryModal) closeUpdateInventoryModal.addEventListener("click", closeUpdateInventory);
-if (cancelUpdateInventoryModal) cancelUpdateInventoryModal.addEventListener("click", closeUpdateInventory);
-
-const invAddNewChemicalBtn = document.getElementById("invAddNewChemicalBtn");
-if (invAddNewChemicalBtn) {
-  invAddNewChemicalBtn.addEventListener("click", () => {
-    closeUpdateInventory();
-    openProductModal(null);
-  });
-}
-
-if (updateInventoryForm) {
-  updateInventoryForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const saveBtn = document.getElementById("saveInventoryBtn");
-    if (saveBtn) {
-      saveBtn.disabled = true;
-      saveBtn.textContent = "Saving All Stock Levels...";
-    }
-
-    const qtyInputs = updateInventoryForm.querySelectorAll(".inv-qty-input");
-    const updates = Array.from(qtyInputs).map((input) => {
-      const id = input.getAttribute("data-id");
-      const qty = input.value.trim();
-      const unitEl = updateInventoryForm.querySelector(`.inv-unit-select[data-id="${id}"]`);
-      const statusEl = updateInventoryForm.querySelector(`.inv-status-select[data-id="${id}"]`);
-      return {
-        id,
-        stockQty: qty,
-        stockUnit: unitEl ? unitEl.value : "Bags",
-        stockStatus: statusEl ? statusEl.value : "optimal",
-      };
-    });
-
-    try {
-      showAdminToast("Saving inventory stock levels...", "info");
-      const res = await fetchAdmin("/api/admin/products/bulk-inventory", {
-        method: "POST",
-        body: JSON.stringify({ updates }),
-      });
-
-      if (!res || !res.ok) {
-        // Fallback to sequential updates if needed
-        for (const u of updates) {
-          await fetchAdmin(`/api/admin/products/${u.id}`, {
-            method: "PUT",
-            body: JSON.stringify({ stockQty: u.stockQty, stockUnit: u.stockUnit, stockStatus: u.stockStatus }),
-          });
-        }
-      }
-
-      // Update in memory and local storage
-      updates.forEach((u) => {
-        const prod = productsData.find((p) => String(p.id) === String(u.id));
-        if (prod) {
-          prod.stockQty = u.stockQty;
-          prod.stockUnit = u.stockUnit;
-          prod.stockStatus = u.stockStatus;
-        }
-      });
-      saveLocalCatalog(productsData);
-
-      showAdminToast("All inventory levels saved successfully!", "success");
-      closeUpdateInventory();
-      await loadProducts();
-    } catch (err) {
-      console.error("Inventory update error:", err);
-      showAdminToast("Failed to save inventory: " + err.message, "error");
-    } finally {
-      if (saveBtn) {
-        saveBtn.disabled = false;
-        saveBtn.textContent = "Save All Stock Levels";
-      }
-    }
-  });
-}
-
 function applyInventoryUI() {
-  // Inventory is now managed directly inside the Product Catalog
+  // Inventory stock column removed
 }
 
 // 4. + Generate Report Action

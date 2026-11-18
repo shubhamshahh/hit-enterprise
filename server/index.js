@@ -1,21 +1,25 @@
 const fs = require("fs");
 const path = require("path");
 
-// Load .env file automatically
-const envPath = path.join(__dirname, "..", ".env");
-if (fs.existsSync(envPath)) {
-  const envContent = fs.readFileSync(envPath, "utf-8");
-  envContent.split("\n").forEach((line) => {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
-      const [key, ...valParts] = trimmed.split("=");
-      const val = valParts.join("=").trim().replace(/^["']|["']$/g, "");
-      if (key && !process.env[key.trim()]) {
-        process.env[key.trim()] = val;
+// Load .env files automatically (.env, .env.local, .env.example)
+function loadEnv(filePath) {
+  if (fs.existsSync(filePath)) {
+    const envContent = fs.readFileSync(filePath, "utf-8");
+    envContent.split(/\r?\n/).forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
+        const [key, ...valParts] = trimmed.split("=");
+        const val = valParts.join("=").trim().replace(/^["']|["']$/g, "");
+        if (key && (!process.env[key.trim()] || !process.env[key.trim()].trim())) {
+          process.env[key.trim()] = val;
+        }
       }
-    }
-  });
+    });
+  }
 }
+loadEnv(path.join(__dirname, "..", ".env"));
+loadEnv(path.join(__dirname, "..", ".env.local"));
+loadEnv(path.join(__dirname, "..", ".env.example"));
 
 const express = require("express");
 const {
@@ -31,6 +35,9 @@ const {
   deleteProduct,
   bulkUpdateInventory,
   syncAllProducts,
+  getDatabaseStatus,
+  syncLocalToSupabase,
+  clearAllImages,
 } = require("./db");
 const { sendNotification } = require("./notify");
 
@@ -87,7 +94,7 @@ function isValidEmail(email) {
 // -------------------------------------------------------------
 
 // Public: Chemical Request / Quote submission
-app.post("/api/inquiries", rateLimiter(5, 60 * 1000), (req, res) => {
+app.post("/api/inquiries", rateLimiter(5, 60 * 1000), async (req, res) => {
   const body = req.body || {};
 
   const missing = REQUIRED_FIELDS.filter((field) => !String(body[field] || "").trim());
@@ -101,29 +108,40 @@ app.post("/api/inquiries", rateLimiter(5, 60 * 1000), (req, res) => {
     return res.status(400).json({ error: "Please provide a valid email address." });
   }
 
-  const record = addInquiry({
-    name: String(body.name).trim(),
-    company: String(body.company || "").trim(),
-    email: String(body.email || "").trim(),
-    phone: String(body.phone).trim(),
-    chemical: String(body.chemical).trim(),
-    quantity: String(body.quantity).trim(),
-    unit: String(body.unit || "kg").trim(),
-    industry: String(body.industry || "").trim(),
-    message: String(body.message || "").trim(),
-    source: String(body.source || "form").trim(),
-  });
+  try {
+    const record = await addInquiry({
+      name: String(body.name).trim(),
+      company: String(body.company || "").trim(),
+      email: String(body.email || "").trim(),
+      phone: String(body.phone).trim(),
+      chemical: String(body.chemical).trim(),
+      quantity: String(body.quantity).trim(),
+      unit: String(body.unit || "kg").trim(),
+      industry: String(body.industry || "").trim(),
+      message: String(body.message || "").trim(),
+      source: String(body.source || "form").trim(),
+    });
 
-  // Direct Instant Admin Notification (WhatsApp/SMS/Telegram/Email)
-  sendNotification(record);
+    // Direct Instant Admin Notification (WhatsApp/SMS/Telegram/Email)
+    sendNotification(record);
 
-  return res.status(201).json({ ok: true, id: record.id });
+    return res.status(201).json({ ok: true, id: record.id });
+  } catch (err) {
+    console.error("Error creating inquiry:", err);
+    return res.status(500).json({ error: "Failed to submit request. Please try again." });
+  }
 });
 
 // Public: Get product catalog
-app.get("/api/products", (req, res) => {
-  const products = readAllProducts().filter((p) => p.status !== "inactive");
-  res.json(products);
+app.get("/api/products", async (req, res) => {
+  try {
+    const all = await readAllProducts();
+    const products = (all || []).filter((p) => p.status !== "inactive");
+    res.json(products);
+  } catch (err) {
+    console.error("Error fetching products:", err);
+    res.status(500).json({ error: "Failed to load product catalog." });
+  }
 });
 
 // -------------------------------------------------------------
@@ -150,20 +168,47 @@ app.post("/api/admin/login", rateLimiter(10, 60 * 1000), (req, res) => {
 // ADMIN API ENDPOINTS
 // -------------------------------------------------------------
 
+// Database Status (Supabase Cloud vs Local JSON)
+app.get("/api/admin/database-status", requireAdmin, (req, res) => {
+  res.json(getDatabaseStatus());
+});
+
+// One-Click Sync Local Data to Supabase (Admin)
+app.post("/api/admin/sync-to-supabase", requireAdmin, async (req, res) => {
+  try {
+    const result = await syncLocalToSupabase();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error("Sync to Supabase error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get KPI Stats
-app.get("/api/admin/stats", requireAdmin, (req, res) => {
-  res.json(getStats());
+app.get("/api/admin/stats", requireAdmin, async (req, res) => {
+  try {
+    const stats = await getStats();
+    res.json(stats);
+  } catch (err) {
+    console.error("Error fetching stats:", err);
+    res.status(500).json({ error: "Failed to load stats." });
+  }
 });
 
 // List Inquiries (with Search & Filter)
-app.get("/api/admin/inquiries", requireAdmin, (req, res) => {
-  const { search, status, source } = req.query;
-  const data = listInquiries({ search, status, source });
-  res.json(data);
+app.get("/api/admin/inquiries", requireAdmin, async (req, res) => {
+  try {
+    const { search, status, source } = req.query;
+    const data = await listInquiries({ search, status, source });
+    res.json(data);
+  } catch (err) {
+    console.error("Error fetching inquiries:", err);
+    res.status(500).json({ error: "Failed to load inquiries." });
+  }
 });
 
 // Update Inquiry (Status or Admin Notes)
-app.patch("/api/admin/inquiries/:id", requireAdmin, (req, res) => {
+app.patch("/api/admin/inquiries/:id", requireAdmin, async (req, res) => {
   const { status, adminNotes } = req.body || {};
 
   const updates = {};
@@ -179,70 +224,127 @@ app.patch("/api/admin/inquiries/:id", requireAdmin, (req, res) => {
     updates.adminNotes = String(adminNotes).trim();
   }
 
-  const updated = updateInquiry(req.params.id, updates);
-  if (!updated) return res.status(404).json({ error: "Inquiry not found." });
-  res.json(updated);
+  try {
+    const updated = await updateInquiry(req.params.id, updates);
+    if (!updated) return res.status(404).json({ error: "Inquiry not found." });
+    res.json(updated);
+  } catch (err) {
+    console.error("Error updating inquiry:", err);
+    res.status(500).json({ error: "Failed to update inquiry." });
+  }
 });
 
 // Delete Inquiry
-app.delete("/api/admin/inquiries/:id", requireAdmin, (req, res) => {
-  const deleted = deleteInquiry(req.params.id);
-  if (!deleted) return res.status(404).json({ error: "Inquiry not found." });
-  res.json({ ok: true });
+app.delete("/api/admin/inquiries/:id", requireAdmin, async (req, res) => {
+  try {
+    const deleted = await deleteInquiry(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Inquiry not found." });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error deleting inquiry:", err);
+    res.status(500).json({ error: "Failed to delete inquiry." });
+  }
 });
 
 // Export Inquiries as CSV
-app.get("/api/admin/export", requireAdmin, (req, res) => {
-  const csv = exportInquiriesCSV();
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", `attachment; filename=Hit_Enterprise_Inquiries_${Date.now()}.csv`);
-  res.send(csv);
+app.get("/api/admin/export", requireAdmin, async (req, res) => {
+  try {
+    const csv = await exportInquiriesCSV();
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename=Hit_Enterprise_Inquiries_${Date.now()}.csv`);
+    res.send(csv);
+  } catch (err) {
+    console.error("Error exporting inquiries:", err);
+    res.status(500).json({ error: "Failed to export CSV." });
+  }
 });
 
 // Product Catalog CRUD (Admin)
-app.get("/api/admin/products", requireAdmin, (req, res) => {
-  res.json(readAllProducts());
+app.get("/api/admin/products", requireAdmin, async (req, res) => {
+  try {
+    const products = await readAllProducts();
+    res.json(products);
+  } catch (err) {
+    console.error("Error fetching admin products:", err);
+    res.status(500).json({ error: "Failed to load products." });
+  }
 });
 
-app.post("/api/admin/products", requireAdmin, (req, res) => {
+app.post("/api/admin/products", requireAdmin, async (req, res) => {
   const body = req.body || {};
   if (!body.name || !body.category) {
     return res.status(400).json({ error: "Product name and category are required." });
   }
-  const product = addProduct(body);
-  res.status(201).json(product);
+  try {
+    const product = await addProduct(body);
+    res.status(201).json(product);
+  } catch (err) {
+    console.error("Error adding product:", err);
+    res.status(500).json({ error: "Failed to create product." });
+  }
 });
 
-app.put("/api/admin/products/:id", requireAdmin, (req, res) => {
-  const updated = updateProduct(req.params.id, req.body || {});
-  if (!updated) return res.status(404).json({ error: "Product not found." });
-  res.json(updated);
+app.put("/api/admin/products/:id", requireAdmin, async (req, res) => {
+  try {
+    const updated = await updateProduct(req.params.id, req.body || {});
+    if (!updated) return res.status(404).json({ error: "Product not found." });
+    res.json(updated);
+  } catch (err) {
+    console.error("Error updating product:", err);
+    res.status(500).json({ error: "Failed to update product." });
+  }
 });
 
-app.delete("/api/admin/products/:id", requireAdmin, (req, res) => {
-  const deleted = deleteProduct(req.params.id);
-  if (!deleted) return res.status(404).json({ error: "Product not found." });
-  res.json({ ok: true });
+app.delete("/api/admin/products/:id", requireAdmin, async (req, res) => {
+  try {
+    const deleted = await deleteProduct(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Product not found." });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error deleting product:", err);
+    res.status(500).json({ error: "Failed to delete product." });
+  }
 });
 
 // Bulk Update Inventory Stock (Admin)
-app.post("/api/admin/products/bulk-inventory", requireAdmin, (req, res) => {
+app.post("/api/admin/products/bulk-inventory", requireAdmin, async (req, res) => {
   const updates = (req.body && req.body.updates) || [];
   if (!Array.isArray(updates) || !updates.length) {
     return res.status(400).json({ error: "Missing or invalid 'updates' array." });
   }
-  const updated = bulkUpdateInventory(updates);
-  res.json({ ok: true, count: updated.length, products: updated });
+  try {
+    const updated = await bulkUpdateInventory(updates);
+    res.json({ ok: true, count: updated.length, products: updated });
+  } catch (err) {
+    console.error("Error in bulk inventory update:", err);
+    res.status(500).json({ error: "Failed to update inventory." });
+  }
 });
 
 // Full Catalog Sync / Restore (Admin)
-app.post("/api/admin/products/sync", requireAdmin, (req, res) => {
+app.post("/api/admin/products/sync", requireAdmin, async (req, res) => {
   const products = (req.body && req.body.products) || [];
   if (!Array.isArray(products) || !products.length) {
     return res.status(400).json({ error: "Missing or invalid 'products' array." });
   }
-  const synced = syncAllProducts(products);
-  res.json({ ok: true, count: synced.length, products: synced });
+  try {
+    const synced = await syncAllProducts(products);
+    res.json({ ok: true, count: synced.length, products: synced });
+  } catch (err) {
+    console.error("Error syncing products:", err);
+    res.status(500).json({ error: "Failed to sync products." });
+  }
+});
+
+// Clear All Product Images across Supabase and storage
+app.post("/api/admin/products/clear-all-images", requireAdmin, async (req, res) => {
+  try {
+    const result = await clearAllImages();
+    res.json(result);
+  } catch (err) {
+    console.error("Error clearing images:", err);
+    res.status(500).json({ error: "Failed to clear images." });
+  }
 });
 
 // Test Notification Endpoint
@@ -269,12 +371,14 @@ app.post("/api/admin/test-notify", requireAdmin, async (req, res) => {
   }
 });
 
-app.get("/api/health", (req, res) => res.json({ ok: true }));
-app.get("/api", (req, res) => res.json({ ok: true, name: "Hit Enterprise API" }));
+app.get("/api/health", (req, res) => res.json({ ok: true, database: getDatabaseStatus() }));
+app.get("/api", (req, res) => res.json({ ok: true, name: "Hit Enterprise API", database: getDatabaseStatus() }));
 
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
+    const dbStatus = getDatabaseStatus();
     console.log(`Hit Enterprise server running on http://localhost:${PORT}`);
+    console.log(`[Database] Provider: ${dbStatus.provider.toUpperCase()} (${dbStatus.isSupabaseConfigured ? 'Supabase Cloud Connected' : 'Local JSON Mode'})`);
   });
 }
 
