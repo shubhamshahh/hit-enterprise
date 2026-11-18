@@ -895,15 +895,19 @@ p { color: var(--color-ink-soft); }
 
 /* ---------- Contact ---------- */
 .contact-layout {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap: 32px;
+  display: block;
   margin-top: 48px;
 }
 .contact-info {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+@media (max-width: 900px) {
+  .contact-info {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 .contact-card {
   display: flex;
