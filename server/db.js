@@ -290,8 +290,14 @@ async function exportInquiriesCSV() {
 
 async function readAllProducts() {
   if (supabase.isSupabaseConfigured()) {
-    const prods = await supabase.getAllProducts();
-    return Array.isArray(prods) ? prods : [];
+    try {
+      const prods = await supabase.getAllProducts();
+      if (Array.isArray(prods) && prods.length > 0) {
+        return prods;
+      }
+    } catch (err) {
+      console.warn("[Database] Supabase readAllProducts error, falling back to local:", err.message);
+    }
   }
   return readJSON(PRODUCTS_FILE, DEFAULT_PRODUCTS);
 }

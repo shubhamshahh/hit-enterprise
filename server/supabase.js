@@ -20,14 +20,18 @@ function loadEnv(filePath) {
 }
 loadEnv(path.join(__dirname, "..", ".env"));
 loadEnv(path.join(__dirname, "..", ".env.local"));
-loadEnv(path.join(__dirname, "..", ".env.example"));
 
 let supabaseInstance = null;
 
 function isSupabaseConfigured() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
-  return Boolean(url && key && url.trim().length > 0 && key.trim().length > 0);
+  if (!url || !key) return false;
+  const trimmedUrl = url.trim();
+  const trimmedKey = key.trim();
+  if (!trimmedUrl || !trimmedKey) return false;
+  if (trimmedUrl.includes("your-project-id") || trimmedKey.includes("your-supabase")) return false;
+  return true;
 }
 
 function getSupabaseClient() {

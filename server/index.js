@@ -19,7 +19,6 @@ function loadEnv(filePath) {
 }
 loadEnv(path.join(__dirname, "..", ".env"));
 loadEnv(path.join(__dirname, "..", ".env.local"));
-loadEnv(path.join(__dirname, "..", ".env.example"));
 
 const express = require("express");
 const {
